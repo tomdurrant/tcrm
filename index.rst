@@ -61,6 +61,7 @@ Contents
    Installation <docs/install>
    Setting up the model <docs/setup>
    Running the model <docs/execution>
+   Model output <docs/output>
    Examples <docs/examples>
    Model evaluation <docs/evaluation>
    Using different TC databases <docs/sources>
