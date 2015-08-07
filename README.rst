@@ -28,11 +28,10 @@ Features
 Branch
 ------
 
-This development branch (`visuals`) is developing the visualisations
+This development branch (``visuals``) is developing the visualisations
 of output (statistical and hazard levels).
 
-**NOTE**: Because some dependencies are built only for Python 2.7,
- this branch is not backward compatible with Python 2.6.
+**NOTE**: Because some dependencies are built only for Python 2.7, this branch is not backward compatible with Python 2.6.
 
 Dependencies
 ------------
@@ -72,7 +71,7 @@ Status
 Contributing to TCRM
 --------------------
 
-If you would like to take part in TCRM development, take a look at `docs/contributing.rst <https://giihub.com/GeoscienceAustralia/tcrm/blob/master/docs/contributing.rst>`_.
+If you would like to take part in TCRM development, take a look at `docs/contributing.rst <https://github.com/GeoscienceAustralia/tcrm/blob/master/docs/contributing.rst>`_.
 
 License information
 -------------------

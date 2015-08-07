@@ -24,7 +24,7 @@ aggregated windfields at each grid point in the model domain to
 provide ARI wind speed estimates.
 
 Features
-========
+--------
 
 * **Multi-platform**: TCRM can run on desktop machines through to 
   massively-parallel systems (tested on Windows XP/Vista/7, \*NIX);
@@ -42,18 +42,16 @@ Features
   extract time series data at chosen locations;
 
 Releases
-========
+--------
 
 Latest releases can be downloaded from the `Geoscience Australia GitHub repository <https://github.com/GeoscienceAustralia/tcrm/releases>`_. 
 
 Bleeding edge versions are accessible `here <https://github.com/GeoscienceAustralia/tcrm/archive/master.zip>`_. 
 
-Contributions are welcome -- create a `fork
-<https://github.com/GeoscienceAustralia/tcrm/fork>`_ or clone the
-repo.
+Contributions are welcome -- take a look at `docs/contributing.rst <https://giihub.com/GeoscienceAustralia/tcrm/blob/master/docs/contributing.rst>`_.
 
 Contents
-========
+--------
 .. toctree::
    :maxdepth: 1
 
