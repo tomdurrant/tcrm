@@ -2,7 +2,8 @@ The Tropical Cyclone Risk Model
 ===============================
 
 The **Tropical Cyclone Risk Model** is a stochastic tropical cyclone
-model developed by `Geoscience Australia <http://www.ga.gov.au>`_ for estimating the wind hazard from tropical cyclones.
+model developed by `Geoscience Australia <http://www.ga.gov.au>`_ for
+estimating the wind hazard from tropical cyclones.
 
 Due to the relatively short record of quality-controlled, consistent
 tropical cyclone observations, it is difficult to estimate average
@@ -17,7 +18,7 @@ provide ARI wind speed estimates.
 
 
 Features
-========
+--------
 * **Multi-platform**: TCRM can run on desktop machines through to massively-parallel systems (tested on Windows XP/Vista/7, \*NIX);
 * **Multiple options for wind field & boundary layer models**: A number of radial profiles and simple boundary layer models have been included to allow users to test sensitivity to these options.
 * **Globally applicable**: Users can set up a domain in any TC basin in the globe. The model is not tuned to any one region of the globe. Rather, the model is designed to draw sufficient information from best-track archives;
@@ -25,29 +26,16 @@ Features
 * **Single scenarios**: Users can run a single TC event (e.g. using a b-deck format track file) at high temporal resolution and extract time series data at chosen locations;
 
 Branch
-======
+------
 
-This development branch (`tc-dat`) is developing a relational database
-system to allow interrogation of simulations. Users will be able to
-execute queries to identify synthetic events that represent an
-arbitrary return period, some wind speed threshold or proximity to
-tracks with some specified intensity. 
+This development branch (`visuals`) is developing the visualisations
+of output (statistical and hazard levels).
 
-Once a simulation has been executed, the synthetic catalog of events,
-and the corresponding wind fields, will be processed to extract
-details for locations within the simulation domain. The data is stored
-in an `SQLite <http://www.sqlite.org>`_ database using Python's
-`sqlite3 <https://docs.python.org/2/library/sqlite3.html>`_
-module. Presently only generates the database, but will be extended to
-provide a collection of simple queries as part of the standard set-up.
-
-We are also transitioning track files to netcdf4 format to improve
-file management for large simulations.
-
-**NOTE**: Because some dependencies are built only for Python 2.7, this branch is not backward compatible with Python 2.6.
+**NOTE**: Because some dependencies are built only for Python 2.7,
+ this branch is not backward compatible with Python 2.6.
 
 Dependencies
-============
+------------
 
 TCRM requires:
 
@@ -65,24 +53,35 @@ TCRM requires:
 For parallel execution, `Pypar <http://github.com/daleroberts/pypar>`_ is required;
 
 Status
-======
+------
 
-.. image:: https://travis-ci.org/GeoscienceAustralia/tcrm.svg?branch=tc-dat
+.. image:: https://travis-ci.org/GeoscienceAustralia/tcrm.svg?branch=visuals
     :target: https://travis-ci.org/GeoscienceAustralia/tcrm
     :alt: Build status
 
 
-.. image:: https://coveralls.io/repos/GeoscienceAustralia/tcrm/badge.svg?branch=tc-dat
-  :target: https://coveralls.io/r/GeoscienceAustralia/tcrm?branch=tc-dat
+.. image:: https://coveralls.io/repos/GeoscienceAustralia/tcrm/badge.svg?branch=visuals
+  :target: https://coveralls.io/r/GeoscienceAustralia/tcrm?branch=visuals
   :alt: Test coverage
 
     
-.. image:: https://landscape.io/github/GeoscienceAustralia/tcrm/tc-dat/landscape.svg?style=flat
-    :target: https://landscape.io/github/GeoscienceAustralia/tcrm/tc-dat
+.. image:: https://landscape.io/github/GeoscienceAustralia/tcrm/visuals/landscape.svg?style=flat
+    :target: https://landscape.io/github/GeoscienceAustralia/tcrm/visuals
     :alt: Code Health
 
+Contributing to TCRM
+--------------------
+
+If you would like to take part in TCRM development, take a look at `docs/contributing.rst <https://giihub.com/GeoscienceAustralia/tcrm/blob/master/docs/contributing.rst>`_.
+
+License information
+-------------------
+
+See the file `LICENSE.rst <https://github.com/GeoscienceAustralia/tcrm/blob/master/LICENCE.rst>`_ 
+for information on the history of this software, terms and conditions for usage, 
+and a DISCLAIMER OF ALL WARRANTIES.
+
 Screenshot
-==========
+----------
 
 .. image:: https://rawgithub.com/GeoscienceAustralia/tcrm/master/docs/screenshot.png
-
