@@ -30,7 +30,7 @@ from Utilities.parallel import attemptParallel, disableOnWorkers
 from Utilities import pathLocator
 
 
-from PlotInterface.maps import ArrayMapFigure, saveFigure
+from PlotInterface.maps import ArrayMapFigure, saveFigure, FilledContourMapFigure
 
 # Importing :mod:`colours` makes a number of additional colour maps available:
 from Utilities import colours
@@ -198,11 +198,9 @@ class TrackDensity(object):
         self.synHist = ma.masked_values(self.synHist, -9999.)
         self.synHistMean = ma.mean(self.synHist, axis=0)
         self.medSynHist = ma.median(self.synHist, axis=0)
-
-        self.synHistUpper = percentile(ma.compressed(self.synHist),
-                                       per=95, axis=0)
-        self.synHistLower = percentile(ma.compressed(self.synHist),
-                                       per=5, axis=0)
+        self.synHistVar = ma.std(self.synHist, axis=0)
+        self.synHistUpper = percentile(self.synHist, per=95, axis=0)
+        self.synHistLower = percentile(self.synHist, per=5, axis=0)
 
     @disableOnWorkers
     def historic(self):
@@ -234,7 +232,7 @@ class TrackDensity(object):
                 startYr = min(startYr, min(t.Year))
                 endYr = max(endYr, max(t.Year))
             numYears = endYr - startYr
-            self.hist = self.calculate(tracks) / numYears
+            self.hist = self.calculate(tracks) / (numYears - 1)
 
 
 
@@ -427,14 +425,38 @@ class TrackDensity(object):
                           resolution='i')
         cbarlab = "TC observations/yr"
         xgrid, ygrid = np.meshgrid(self.lon_range[:-1], self.lat_range[:-1])
-        figure.add(self.synHistUpper.T, xgrid, ygrid, "Upper percentile", datarange, 
-                   cbarlab, map_kwargs)
+        figure.add(self.synHistUpper.T, xgrid, ygrid, "Upper percentile", 
+                   datarange, cbarlab, map_kwargs)
         figure.add(self.synHistLower.T, xgrid, ygrid, "Lower percentile",
-                    datarange, cbarlab, map_kwargs)
+                   datarange, cbarlab, map_kwargs)
         figure.plot()
         outputFile = pjoin(self.plotPath, 'track_density_percentiles.png')
         saveFigure(figure, outputFile)
-        
+
+    @disableOnWorkers
+    def plotTrackDensityZScore(self):
+        """
+        Plot the Z-score of track density
+
+        """
+        levels = np.arange(-5, 5.1, 1.)
+        figure = FilledContourMapFigure()
+
+        map_kwargs = dict(llcrnrlon=self.lon_range[:-1].min(),
+                          llcrnrlat=self.lat_range[:-1].min(),
+                          urcrnrlon=self.lon_range[:-1].max(),
+                          urcrnrlat=self.lat_range[:-1].max(),
+                          projection='merc',
+                          resolution='i')
+        cbarlabel = ""
+        xgrid, ygrid = np.meshgrid(self.lon_range[:-1], self.lat_range[:-1])
+        zscore = (self.hist - self.synHistMean) / self.synHistVar
+
+        figure.add(zscore.T, xgrid, ygrid, "Z-score", levels, 
+                   cbarlabel, map_kwargs)
+        figure.plot()
+        outputFile = pjoin(self.plotPath, 'track_density_zscore.png')
+        saveFigure(figure, outputFile)
 
     def run(self):
         """Run the track density evaluation"""
@@ -451,5 +473,6 @@ class TrackDensity(object):
 
         self.plotTrackDensity()
         self.plotTrackDensityPercentiles()
+        self.plotTrackDensityZScore()
 
         self.save()

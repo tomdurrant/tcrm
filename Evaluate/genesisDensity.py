@@ -34,7 +34,7 @@ import Utilities.Intersections as Int
 
 from shapely.geometry import Point, LineString, Polygon
 
-from PlotInterface.maps import ArrayMapFigure, saveFigure
+from PlotInterface.maps import ArrayMapFigure, saveFigure, FilledContourMapFigure
 from PlotInterface.tracks import TrackMapFigure
 
 # Importing :mod:`colours` makes a number of additional colour maps available:
@@ -265,11 +265,10 @@ class GenesisDensity(object):
         self.synHist = ma.masked_values(self.synHist, -9999.)
         self.synHistMean = ma.mean(self.synHist, axis=0)
         self.medSynHist = ma.median(self.synHist, axis=0)
+        self.synHistVar = ma.std(self.synHist, axis=0)
 
-        self.synHistUpper = percentile(ma.compressed(self.synHist),
-                                       per=95, axis=0)
-        self.synHistLower = percentile(ma.compressed(self.synHist),
-                                       per=5, axis=0)
+        self.synHistUpper = percentile(self.synHist, per=95, axis=0)
+        self.synHistLower = percentile(self.synHist, per=5, axis=0)
 
     @disableOnWorkers
     def historic(self):
@@ -511,13 +510,37 @@ class GenesisDensity(object):
         outputFile = pjoin(self.plotPath, 'genesis_density_percentiles.png')
         saveFigure(figure, outputFile)
 
+    @disableOnWorkers
+    def plotGenesisDensityZScore(self):
+        """
+        Plot the Z-score of genesis density
+
+        """
+        datarange = np.arange(-5, 5.1, 1)
+        figure = FilledContourMapFigure()
+
+        map_kwargs = dict(llcrnrlon=self.lon_range[:-1].min(),
+                          llcrnrlat=self.lat_range[:-1].min(),
+                          urcrnrlon=self.lon_range[:-1].max(),
+                          urcrnrlat=self.lat_range[:-1].max(),
+                          projection='merc',
+                          resolution='i')
+        cbarlabel = ""
+        xgrid, ygrid = np.meshgrid(self.lon_range[:-1], self.lat_range[:-1])
+        zscore = (self.hist - self.synHistMean) / self.synHistVar
+
+        figure.add(zscore.T, xgrid, ygrid, "Z-score", datarange, 
+                   cbarlabel, map_kwargs)
+        figure.plot()
+        outputFile = pjoin(self.plotPath, 'genesis_density_zscore.png')
+        saveFigure(figure, outputFile)
     
 
     def run(self):
         """Run the track density evaluation"""
         global pp
         pp = attemptParallel()
-
+        log.info("Running genesis density evaluation")
         self.historic()
 
         pp.barrier()
@@ -528,5 +551,6 @@ class GenesisDensity(object):
 
         self.plotGenesisDensity()
         self.plotGenesisDensityPercentiles()
+        self.plotGenesisDensityZScore()
 
         self.save()
