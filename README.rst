@@ -28,7 +28,10 @@ Features
 * **Evaluation metrics**: Offers capability to run objective evaluation of track model metrics (e.g. landfall rates);
 * **Single scenarios**: Users can run a single TC event (e.g. using a b-deck format track file) at high temporal resolution and extract time series data at chosen locations;
 
+Branch
+======
 
+This branch contains some new functionality for evaluation of track model performance. 
 
 Dependencies
 ============
@@ -44,16 +47,16 @@ Dependencies
 Status
 ======
 
-.. image:: https://travis-ci.org/GeoscienceAustralia/tcrm.svg?branch=master
+.. image:: https://travis-ci.org/GeoscienceAustralia/tcrm.svg?branch=evaluation
     :target: https://travis-ci.org/GeoscienceAustralia/tcrm
     :alt: Build status
     
-.. image:: https://coveralls.io/repos/GeoscienceAustralia/tcrm/badge.svg?branch=master
-  :target: https://coveralls.io/r/GeoscienceAustralia/tcrm?branch=master
+.. image:: https://coveralls.io/repos/GeoscienceAustralia/tcrm/badge.svg?branch=evaluation
+  :target: https://coveralls.io/r/GeoscienceAustralia/tcrm?branch=evaluation
   :alt: Test coverage
 
-.. image:: https://landscape.io/github/GeoscienceAustralia/tcrm/master/landscape.svg?style=flat
-   :target: https://landscape.io/github/GeoscienceAustralia/tcrm/master
+.. image:: https://landscape.io/github/GeoscienceAustralia/tcrm/evaluation/landscape.svg?style=flat
+   :target: https://landscape.io/github/GeoscienceAustralia/tcrm/evaluation
    :alt: Code Health
 
 Screenshot
@@ -61,3 +64,14 @@ Screenshot
 
 .. image:: https://rawgithub.com/GeoscienceAustralia/tcrm/master/docs/screenshot.png
 
+Contributing to TCRM
+====================
+
+If you would like to take part in TCRM development, take a look at `docs/contributing.rst <https://github.com/GeoscienceAustralia/tcrm/blob/master/docs/contributing.rst>`_.
+
+License information
+===================
+
+See the file `LICENSE.rst <https://github.com/GeoscienceAustralia/tcrm/blob/master/LICENCE.rst>`_ 
+for information on the history of this software, terms and conditions for usage, 
+and a DISCLAIMER OF ALL WARRANTIES.
