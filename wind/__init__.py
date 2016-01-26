@@ -28,6 +28,7 @@ calling the :meth:`run` with the location of a *configFile*::
 
 """
 
+import xray as xr
 import numpy as np
 import logging as log
 import itertools
@@ -200,7 +201,8 @@ class WindfieldAroundTrack(object):
 
         return (Ux, Vy, P)
 
-    def regionalExtremes(self, gridLimit, timeStepCallback=None):
+    def regionalExtremes(self, gridLimit, timeStepCallback=None,
+                         writeWinds=True):
         """
         Calculate the maximum potential wind gust and minimum
         pressure over the region throughout the life of the
@@ -258,6 +260,14 @@ class WindfieldAroundTrack(object):
                                 (yMin <= self.track.Latitude) &
                                 (self.track.Latitude <= yMax))[0]
 
+        # Initiate wind speed arrays
+        if writeWinds:
+            uwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
+            vwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
+            slp = np.ones((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f') * envPressure
+            times = []
+
+        nn = 0
         for i in timesInRegion:
 
             # Map the local grid to the regional grid
@@ -278,16 +288,16 @@ class WindfieldAroundTrack(object):
             Ux, Vy, P = self.localWindField(i)
 
             # Calculate the local wind gust and bearing
-            Ux *= self.gustFactor
-            Vy *= self.gustFactor
+            Uxg = Ux * self.gustFactor
+            Vyg = Ux * self.gustFactor
 
-            localGust = np.sqrt(Ux ** 2 + Vy ** 2)
-            localBearing = ((np.arctan2(-Ux, -Vy)) * 180. / np.pi)
+            localGust = np.sqrt(Uxg ** 2 + Vyg ** 2)
+            localBearing = ((np.arctan2(-Uxg, -Vyg)) * 180. / np.pi)
 
             # Handover this time step to a callback if required
             if timeStepCallback is not None:
                 timeStepCallback(self.track.Datetime[i],
-                                 localGust, Ux, Vy, P,
+                                 localGust, Uxg, Vyg, P,
                                  lonGrid[imin:imax] / 100.,
                                  latGrid[jmin:jmax] / 100.)
 
@@ -299,19 +309,60 @@ class WindfieldAroundTrack(object):
             bearing[jmin:jmax, imin:imax] = np.where(
                 mask, localBearing, bearing[jmin:jmax, imin:imax])
             UU[jmin:jmax, imin:imax] = np.where(
-                mask, Ux, UU[jmin:jmax, imin:imax])
+                mask, Uxg, UU[jmin:jmax, imin:imax])
             VV[jmin:jmax, imin:imax] = np.where(
-                mask, Vy, VV[jmin:jmax, imin:imax])
+                mask, Vyg, VV[jmin:jmax, imin:imax])
 
             # Retain the lowest pressure
             pressure[jmin:jmax, imin:imax] = np.where(
                 P < pressure[jmin:jmax, imin:imax],
                 P, pressure[jmin:jmax, imin:imax])
 
-        #log.info("Vmax: {0}; Vt: {1}; Pmin: {2}".format(gust.max(), 
-        #                                                 self.track.Speed.max()/3.6, 
-        #                                                 self.track.CentralPressure.min()))
+            # Write u and v where valid
+            if writeWinds:
+                slpnn, uwndnn, vwndnn = self.calcFields(P,Ux,Vx)
+                slp[nn, jmin:jmax, imin:imax] = P
+                uwnd[nn, jmin:jmax, imin:imax] = Ux
+                vwnd[nn, jmin:jmax, imin:imax] = Vy
+                times.append(self.track.Datetime[i])
+            nn += 1
+
+        if writeWinds:
+            ddict = {'lat': latGrid / 100.,
+                     'lon': lonGrid / 100.,
+                     'time': times,
+                     'slp': (['time', 'lat', 'lon'], slp),
+                     'uwnd': (['time', 'lat', 'lon'], uwnd),
+                     'vwnd': (['time', 'lat', 'lon'], vwnd),
+                     }
+            self.saveWindToFile(ddict,'test.nc')
+
         return gust, bearing, UU, VV, pressure, lonGrid / 100., latGrid / 100.
+
+    def saveWindToFile(self, ddict, filename):
+
+        log.info("Writing wind to %s" % filename)
+
+        # gatts = {
+        #     'title': 'TCRM hazard simulation - synthetic event wind field',
+        #     'tcrm_version': flProgramVersion(),
+        #     'python_version': sys.version,
+        #     #'track_file': self.trackfile,
+        #     'radial_profile': self.profileType,
+        #     'boundary_layer': self.windFieldType,
+        #     'beta': self.beta}
+
+        # # Add configuration settings to global attributes:
+        # for section in self.config.sections():
+        #     for option in self.config.options(section):
+        #         key = "{0}_{1}".format(section, option)
+        #         value = self.config.get(section, option)
+        #         gatts[key] = value
+        dset = xr.Dataset(ddict)
+        dset.to_netcdf(filename)
+
+
+
 
 
 class WindfieldGenerator(object):
