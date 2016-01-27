@@ -890,6 +890,12 @@ class WindFieldModel(object):
         """
         raise NotImplementedError
 
+    def blendWeights(self, R,):
+        """
+        The wind field.
+        """
+        return 1 / np.exp(R / ( 3 * self.rMax)) #TODO is this sensible? 
+
 
 class HubbertWindField(WindFieldModel):
 

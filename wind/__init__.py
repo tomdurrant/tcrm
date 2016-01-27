@@ -199,7 +199,9 @@ class WindfieldAroundTrack(object):
 
         Ux, Vy = windfield.field(R, theta, vFm, thetaFm,  thetaMax)
 
-        return (Ux, Vy, P)
+        bweights = windfield.blendWeights(R)
+
+        return (Ux, Vy, P, bweights)
 
     def regionalExtremes(self, gridLimit, timeStepCallback=None,
                          writeWinds=True):
@@ -265,6 +267,7 @@ class WindfieldAroundTrack(object):
             uwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
             vwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
             slp = np.ones((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f') * envPressure
+            bweights = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
             times = []
 
         nn = 0
@@ -285,7 +288,7 @@ class WindfieldAroundTrack(object):
 
             # Calculate the local wind speeds and pressure at time i
 
-            Ux, Vy, P = self.localWindField(i)
+            Ux, Vy, P, bw = self.localWindField(i)
 
             # Calculate the local wind gust and bearing
             Uxg = Ux * self.gustFactor
@@ -320,10 +323,10 @@ class WindfieldAroundTrack(object):
 
             # Write u and v where valid
             if writeWinds:
-                slpnn, uwndnn, vwndnn = self.calcFields(P,Ux,Vx)
                 slp[nn, jmin:jmax, imin:imax] = P
                 uwnd[nn, jmin:jmax, imin:imax] = Ux
                 vwnd[nn, jmin:jmax, imin:imax] = Vy
+                bweights[nn, jmin:jmax, imin:imax] = bw
                 times.append(self.track.Datetime[i])
             nn += 1
 
@@ -334,6 +337,7 @@ class WindfieldAroundTrack(object):
                      'slp': (['time', 'lat', 'lon'], slp),
                      'uwnd': (['time', 'lat', 'lon'], uwnd),
                      'vwnd': (['time', 'lat', 'lon'], vwnd),
+                     'bweights': (['time', 'lat', 'lon'], bweights),
                      }
             self.saveWindToFile(ddict,'test.nc')
 
