@@ -12,20 +12,19 @@ log.level=20
 import xray as xr
 import matplotlib.pyplot as plt
 
-log.basicConfig(level=log.DEBUG)
-
-
 class getData(object):
 
-    def __init__(self, t0, t1
+    def __init__(self, t0, t1,
                  var=['ugrd10m', 'vgrd10m', 'mslp'],
                  dset=['cfsr'],
-                 bnd=[0,359,-80,80],
+                 bnd=[0,360,-80,80],
                  res=0.5,
+                 dt=0.5,
                  udshost='http://uds1.rag.metocean.co.nz:9191/uds',
                  udsctls=None,
                  udsconfig=None):
         self.t0 = t0
+        self.t1 = t1
         self.var = var
         self.dset = dset
         self.bnd = bnd
@@ -33,7 +32,9 @@ class getData(object):
         self.udshost = udshost
         self.udsctls = udsctls
         self.udsconfig = udsconfig
-        self.dt=1/60.
+        self.dt=dt
+        self.nx = (bnd[1] - bnd[0])/res + 1
+        self.ny = (bnd[3] - bnd[2])/res + 1
         # Put standard variables in qdict
         if self.udsconfig:
             self.udsctls = self.get_data_config()
@@ -50,6 +51,7 @@ class getData(object):
         self.qdict.update({'var': list(self.var)})
         self.qdict.update({'dset': self.dset})
         self.qdict.update({'bnd': self.bnd})
+        self.qdict.update({'dim': [self.nx,self.ny]})
         self.getUDS()
 
     def get_data_config(self):
@@ -70,10 +72,8 @@ class getData(object):
     def getUDS(self,):
         self.qdict.update({'time': [self.t0.strftime('%Y%m%d.%H%M%S'),
                            (self.t1+timedelta(hours=self.dt)).strftime('%Y%m%d.%H%M%S')]})
-        log.info(
-            "    Downloading %s data from the UDS \n    for %s" %
-            (self.qdict['dset'],
-             self.qdict['time'][0]))
+        log.info("Downloading %s data from the UDS for %s" %
+                 (self.qdict['dset'],self.qdict['time'][0]))
         query = Query(self.qdict)
         log.debug("Query %s" % query)
         udsnc = tempfile.mktemp()
@@ -81,7 +81,7 @@ class getData(object):
             nc = None
             url = self.udshost + '?' + query.str()
             log.info('Requesting url ' + url)
-            log.debug('Saving file to %s' % udsnc)
+            log.info('Saving file to %s' % udsnc)
             self.filename, headers = urllib.urlretrieve(url, udsnc)
         elif self.udsctls:
             uds = UDS(ctlfile=self.udsctls) 

@@ -98,9 +98,9 @@ class WindfieldAroundTrack(object):
     """
 
     def __init__(self, track, profileType='powell', windFieldType='kepert',
-                 beta=1.3, beta1=1.5, beta2=1.4, thetaMax=70.0,
-                 margin=2.0, resolution=0.05, gustFactor=1.188,
-                 gridLimit=None, domain='bounded'):
+                 beta=1.3, beta1=1.5, beta2=1.4, thetaMax=70.0, margin=2.0,
+                 resolution=0.05, gustFactor=1.188, gridLimit=None,
+                 domain='bounded',writeWinds=True, blendWinds=True):
         self.track = track
         self.profileType = profileType
         self.windFieldType = windFieldType
@@ -113,6 +113,8 @@ class WindfieldAroundTrack(object):
         self.gustFactor = gustFactor
         self.gridLimit = gridLimit
         self.domain = domain
+        self.writeWinds = writeWinds
+        self.blendWinds = blendWinds
 
     def polarGridAroundEye(self, i):
         """
@@ -204,7 +206,7 @@ class WindfieldAroundTrack(object):
         return (Ux, Vy, P, bweights)
 
     def regionalExtremes(self, gridLimit, timeStepCallback=None,
-                         writeWinds=True):
+                         ):
         """
         Calculate the maximum potential wind gust and minimum
         pressure over the region throughout the life of the
@@ -262,8 +264,18 @@ class WindfieldAroundTrack(object):
                                 (yMin <= self.track.Latitude) &
                                 (self.track.Latitude <= yMax))[0]
 
-        # Initiate wind speed arrays
-        if writeWinds:
+        if self.writeWinds:
+            if self.blendWinds:
+                from blend import getData
+                self.data = getData(self.track.Datetime[timesInRegion[0]],
+                               self.track.Datetime[timesInRegion[-1]],
+                               var=['ugrd10m','vgrd10m','mslp'],
+                               dset=['cfsr'],
+                               bnd=[lonGrid.min()/100.,lonGrid.max()/100.,latGrid.min()/100.,latGrid.max()/100.],
+                               res=self.resolution,
+                               dt=1/12., # TODO - This is hardcoded for now, need to fix
+                               udshost='http://uds1.rag.metocean.co.nz:9191/uds')
+            # Initiate wind speed arrays
             uwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
             vwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
             slp = np.ones((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f') * envPressure
@@ -322,15 +334,16 @@ class WindfieldAroundTrack(object):
                 P, pressure[jmin:jmax, imin:imax])
 
             # Write u and v where valid
-            if writeWinds:
+            if self.writeWinds:
                 slp[nn, jmin:jmax, imin:imax] = P
                 uwnd[nn, jmin:jmax, imin:imax] = Ux
                 vwnd[nn, jmin:jmax, imin:imax] = Vy
-                bweights[nn, jmin:jmax, imin:imax] = bw
+                if self.blendWinds:
+                    bweights[nn, jmin:jmax, imin:imax] = bw
                 times.append(self.track.Datetime[i])
             nn += 1
 
-        if writeWinds:
+        if self.writeWinds:
             ddict = {'lat': latGrid / 100.,
                      'lon': lonGrid / 100.,
                      'time': times,
@@ -363,6 +376,14 @@ class WindfieldAroundTrack(object):
         #         value = self.config.get(section, option)
         #         gatts[key] = value
         dset = xr.Dataset(ddict)
+        if self.blendWinds:
+            bground = self.data.dset.sel(time = ddict['time'],method='nearest')
+            dset['mslp_cfsr'] = bground.mslp
+            dset['uwnd_cfsr'] = bground.uwnd
+            dset['vwnd_cfsr'] = bground.vwnd
+            dset['mslp_blend'] = brgound.mslp * bground.bweights
+            dset['uwnd_blend'] = brgound.uwnd * bground.bweights
+            dset['vwnd_blend'] = brgound.vwnd * bground.bweights
         dset.to_netcdf(filename)
 
 
