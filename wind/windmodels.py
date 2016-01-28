@@ -890,11 +890,24 @@ class WindFieldModel(object):
         """
         raise NotImplementedError
 
-    def blendWeights(self, R,):
+    def blendWeights(self, R):
         """
-        The wind field.
+        The weights for blending of wind field.
         """
-        return 1 / np.exp(R / ( 3 * self.rMax)) #TODO is this sensible? 
+        mu = 0
+        sig = 5 * self.rMax
+        delta = 3 * self.rMax
+
+        def gauss(x, mu, sig):
+            return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+
+        def tophat(x, delta):
+            ret = np.zeros_like(x)
+            ret[x < delta] = 1
+            return ret
+
+        return np.convolve(gauss(R,mu,sig), tophat(R,delta))
+
 
 
 class HubbertWindField(WindFieldModel):
