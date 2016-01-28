@@ -91,7 +91,6 @@ def run(configFile, callback=None):
     plot_set(dset,'mslp',2)
     plt.show()
 
-
 def plot_set(dset,var,timestep,projection=ccrs.PlateCarree()):
     fig, axs = plt.subplots(2, 2, figsize=(15,10),
                            subplot_kw={'projection':projection})
@@ -101,7 +100,6 @@ def plot_set(dset,var,timestep,projection=ccrs.PlateCarree()):
     plotMap(dset[var+'_bg'][timestep],ax=axs[1,0],vmin=vmin,vmax=vmax); plt.title('Background')
     plotMap(dset['bweights'][timestep],ax=axs[0,1]); plt.title('TC Weighting')
     plotMap(dset[var][timestep],ax=axs[1,1],vmin=vmin,vmax=vmax); plt.title('Blended')
-
 
 def main(configFile):
     """
