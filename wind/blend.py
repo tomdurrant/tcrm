@@ -11,6 +11,7 @@ import logging as log
 log.level=20
 import xray as xr
 import matplotlib.pyplot as plt
+import os
 
 class getData(object):
 
@@ -76,20 +77,25 @@ class getData(object):
                  (self.qdict['dset'],self.qdict['time'][0]))
         query = Query(self.qdict)
         log.debug("Query %s" % query)
-        udsnc = tempfile.mktemp()
-        if self.udshost:
-            nc = None
-            url = self.udshost + '?' + query.str()
-            log.info('Requesting url ' + url)
-            log.info('Saving file to %s' % udsnc)
-            self.filename, headers = urllib.urlretrieve(url, udsnc)
-        elif self.udsctls:
-            uds = UDS(ctlfile=self.udsctls) 
-            uds.logger = log
-            uds.getDSList(query)
-            uds.getData(query, udsnc)
-            log.debug('Saving file to %s' % udsnc)
+        #udsnc = tempfile.mktemp()
+        udsnc = 'cfsr.nc'
+        if os.path.isfile(udsnc):
+            log.info("Using already downloaded file")
             self.filename = udsnc
+        else:
+            if self.udshost:
+                nc = None
+                url = self.udshost + '?' + query.str()
+                log.info('Requesting url ' + url)
+                log.info('Saving file to %s' % udsnc)
+                self.filename, headers = urllib.urlretrieve(url, udsnc)
+            elif self.udsctls:
+                uds = UDS(ctlfile=self.udsctls) 
+                uds.logger = log
+                uds.getDSList(query)
+                uds.getData(query, udsnc)
+                log.debug('Saving file to %s' % udsnc)
+                self.filename = udsnc
         self.dset = xr.open_dataset(self.filename)
 
 def test():

@@ -30,6 +30,7 @@ calling the :meth:`run` with the location of a *configFile*::
 
 import xray as xr
 import numpy as np
+import numpy.ma as ma
 import logging as log
 import itertools
 import math
@@ -273,12 +274,12 @@ class WindfieldAroundTrack(object):
                                dset=['cfsr'],
                                bnd=[lonGrid.min()/100.,lonGrid.max()/100.,latGrid.min()/100.,latGrid.max()/100.],
                                res=self.resolution,
-                               dt=1/12., # TODO - This is hardcoded for now, need to fix
+                               dt=1/6., # TODO - This is hardcoded for now, need to fix
                                udshost='http://uds1.rag.metocean.co.nz:9191/uds')
             # Initiate wind speed arrays
             uwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
             vwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
-            slp = np.ones((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f') * envPressure
+            mslp = np.ones((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f') * envPressure
             bweights = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
             times = []
 
@@ -335,7 +336,7 @@ class WindfieldAroundTrack(object):
 
             # Write u and v where valid
             if self.writeWinds:
-                slp[nn, jmin:jmax, imin:imax] = P
+                mslp[nn, jmin:jmax, imin:imax] = P
                 uwnd[nn, jmin:jmax, imin:imax] = Ux
                 vwnd[nn, jmin:jmax, imin:imax] = Vy
                 if self.blendWinds:
@@ -347,7 +348,7 @@ class WindfieldAroundTrack(object):
             ddict = {'lat': latGrid / 100.,
                      'lon': lonGrid / 100.,
                      'time': times,
-                     'slp': (['time', 'lat', 'lon'], slp),
+                     'mslp': (['time', 'lat', 'lon'], mslp),
                      'uwnd': (['time', 'lat', 'lon'], uwnd),
                      'vwnd': (['time', 'lat', 'lon'], vwnd),
                      'bweights': (['time', 'lat', 'lon'], bweights),
@@ -364,7 +365,7 @@ class WindfieldAroundTrack(object):
         #     'title': 'TCRM hazard simulation - synthetic event wind field',
         #     'tcrm_version': flProgramVersion(),
         #     'python_version': sys.version,
-        #     #'track_file': self.trackfile,
+        #     'track_file': self.track.trackfile,
         #     'radial_profile': self.profileType,
         #     'boundary_layer': self.windFieldType,
         #     'beta': self.beta}
@@ -376,16 +377,20 @@ class WindfieldAroundTrack(object):
         #         value = self.config.get(section, option)
         #         gatts[key] = value
         dset = xr.Dataset(ddict)
+        # dset.attr.update(gatts)
         if self.blendWinds:
-            bground = self.data.dset.sel(time = ddict['time'],method='nearest')
-            dset['mslp_cfsr'] = bground.mslp
-            dset['uwnd_cfsr'] = bground.uwnd
-            dset['vwnd_cfsr'] = bground.vwnd
-            dset['mslp_blend'] = brgound.mslp * bground.bweights
-            dset['uwnd_blend'] = brgound.uwnd * bground.bweights
-            dset['vwnd_blend'] = brgound.vwnd * bground.bweights
+            bground = self.data.dset.sel(time = dset['time'],method='nearest')
+            if np.allclose(bground.lat.values, dset.lat.values):
+                bground.coords['lat'] = dset.coords['lat']
+            if np.allclose(bground.lon.values, dset.lon.values):
+                bground.coords['lon'] = dset.coords['lon']
+            bground.to_netcdf('bgound.nc')
+            bground = bground.rename({'mslp': 'mslp_bg', 'ugrd10m': 'uwnd_bg', 'vgrd10m': 'vwnd_bg'})
+            dset.update(bground)
+            dset['mslp_blend'] = (dset.mslp * dset.bweights) + (dset.mslp_bg * (1 - dset.bweights))
+            dset['uwnd_blend'] = (dset.uwnd * dset.bweights) + (dset.uwnd_bg * (1 - dset.bweights))
+            dset['vwnd_blend'] = (dset.vwnd * dset.bweights) + (dset.vwnd_bg * (1 - dset.bweights))
         dset.to_netcdf(filename)
-
 
 
 
