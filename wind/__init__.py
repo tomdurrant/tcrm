@@ -264,17 +264,17 @@ class WindfieldAroundTrack(object):
                                 (yMin <= self.track.Latitude) &
                                 (self.track.Latitude <= yMax))[0]
 
+        #delta = config.get('DataProcess', 'Delta')
         if self.writeWinds:
             if self.blendWinds:
                 from blend import getData
                 self.data = getData(self.track.Datetime[timesInRegion[0]],
-                               self.track.Datetime[timesInRegion[-1]],
-                               var=['ugrd10m','vgrd10m','mslp'],
-                               dset=['cfsr'],
-                               bnd=[lonGrid.min()/100.,lonGrid.max()/100.,latGrid.min()/100.,latGrid.max()/100.],
-                               res=self.resolution,
-                               dt=1/6., # TODO - This is hardcoded for now, need to fix
-                               udshost='http://uds1.rag.metocean.co.nz:9191/uds')
+                                    self.track.Datetime[timesInRegion[-1]],
+                                    var=['ugrd10m','vgrd10m','mslp'],
+                                    dset=['cfsr'],
+                                    bnd=[lonGrid.min()/100.,lonGrid.max()/100.,latGrid.min()/100.,latGrid.max()/100.],
+                                    res=self.resolution, dt=1/2., # TODO - This is hardcoded for now, need to fix
+                                    udshost='http://uds1.rag.metocean.co.nz:9191/uds')
             # Initiate wind speed arrays
             uwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
             vwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
@@ -360,10 +360,11 @@ class WindfieldAroundTrack(object):
                     bground.coords['lon'] = dset.coords['lon']
                 bground.to_netcdf('bgound.nc')
                 bground = bground.rename({'mslp': 'mslp_bg', 'ugrd10m': 'uwnd_bg', 'vgrd10m': 'vwnd_bg'})
+                dset = dset.rename({'mslp': 'mslp_tc', 'uwnd': 'uwnd_tc', 'vwnd': 'vwnd_tc'})
                 dset.update(bground)
-                dset['mslp_blend'] = (dset.mslp * dset.bweights) + (dset.mslp_bg * (1 - dset.bweights))
-                dset['uwnd_blend'] = (dset.uwnd * dset.bweights) + (dset.uwnd_bg * (1 - dset.bweights))
-                dset['vwnd_blend'] = (dset.vwnd * dset.bweights) + (dset.vwnd_bg * (1 - dset.bweights))
+                dset['mslp'] = (dset.mslp_tc * dset.bweights) + (dset.mslp_bg * (1 - dset.bweights))
+                dset['uwnd'] = (dset.uwnd_tc * dset.bweights) + (dset.uwnd_bg * (1 - dset.bweights))
+                dset['vwnd'] = (dset.vwnd_tc * dset.bweights) + (dset.vwnd_bg * (1 - dset.bweights))
         else:
             dset = None
 
