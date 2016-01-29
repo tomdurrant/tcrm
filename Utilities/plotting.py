@@ -25,5 +25,5 @@ def plotMap(da, ax=None, ptype='pcolormesh',cblabel=None,**kwargs):
     gl.xlabels_top = gl.ylabels_right = False
     gl.yformatter = LATITUDE_FORMATTER
     gl.xformatter = LONGITUDE_FORMATTER
-    return ax
+    return mpl
 
