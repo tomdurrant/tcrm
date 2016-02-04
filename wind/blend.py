@@ -23,6 +23,7 @@ class getData(object):
                  dt=0.5,
                  udshost='http://uds1.rag.metocean.co.nz:9191/uds',
                  udsctls=None,
+                 outnc = 'cfsr.nc',
                  udsconfig=None):
         self.t0 = t0
         self.t1 = t1
@@ -77,25 +78,25 @@ class getData(object):
                  (self.qdict['dset'],self.qdict['time'][0],self.qdict['time'][1]))
         query = Query(self.qdict)
         log.debug("Query %s" % query)
-        #udsnc = tempfile.mktemp()
-        udsnc = 'cfsr.nc'
-        if os.path.isfile(udsnc):
-            log.info("Using already downloaded file")
-            self.filename = udsnc
+        #outnc = tempfile.mktemp()
+        outnc = str("uds-%s-%s.nc" % (self.qdict['time'][0],self.qdict['time'][1]))
+        if os.path.isfile(outnc):
+            log.info("Using already downloaded file %s" % outnc)
+            self.filename = outnc
         else:
             if self.udshost:
                 nc = None
                 url = self.udshost + '?' + query.str()
                 log.info('Requesting url ' + url)
-                log.info('Saving file to %s' % udsnc)
-                self.filename, headers = urllib.urlretrieve(url, udsnc)
+                log.info('Saving file to %s' % outnc)
+                self.filename, headers = urllib.urlretrieve(url, outnc)
             elif self.udsctls:
                 uds = UDS(ctlfile=self.udsctls) 
                 uds.logger = log
                 uds.getDSList(query)
-                uds.getData(query, udsnc)
-                log.debug('Saving file to %s' % udsnc)
-                self.filename = udsnc
+                uds.getData(query, outnc)
+                log.debug('Saving file to %s' % outnc)
+                self.filename = outnc
         self.dset = xr.open_dataset(self.filename)
 
 def test():
