@@ -19,8 +19,26 @@ except:
 unittest_dir = pathLocate.getUnitTestDirectory()
 sys.path.append(pathLocate.getRootDirectory())
 
+def plot(V,subplot=111,title=None,vmin=None,vmax=None):
+    fig=plt.gcf()
+    ax=fig.add_subplot(subplot)
+    map=plt.imshow(V,cmap=plt.get_cmap('viridis'),vmin=vmin,vmax=vmax)
+    plt.colorbar()
+    plt.grid(True)
+    plt.title(title)
+
+def plotvec(Ux,Vy,subplot=111,title=None,vmin=None,vmax=None):
+    fig=plt.gcf()
+    ax=fig.add_subplot(subplot)
+    map=plt.imshow(np.sqrt(Ux**2+Vy**2),cmap=plt.get_cmap('viridis'),vmin=vmin,vmax=vmax)
+    plt.colorbar()
+    plt.grid(True)
+    plt.title(title)
+
+
 class TestWindVelocity(NumpyTestCase.NumpyTestCase):
-    plt.figure(figsize=(12,9))
+    vmax=0
+    vmin=-50
 
     def setUp(self):
         pkl_file = open(os.path.join(
@@ -43,65 +61,59 @@ class TestWindVelocity(NumpyTestCase.NumpyTestCase):
         self.test_wP_doubleHolland = cPickle.load(pkl_file)
         pkl_file.close()
 
-    def plot(self,V,subplot=111,title=None,vmin=-50,vmax=0):
-        fig=plt.gcf()
-        ax=fig.add_subplot(subplot)
-        map=plt.imshow(V,cmap=plt.get_cmap('viridis'),vmin=vmin,vmax=vmax)
-        plt.colorbar()
-        plt.grid(True)
-        plt.title(title)
-
     def testRankine(self):
         profile = RankineWindProfile(
             self.cLat, self.cLon, self.pEnv, self.pCentre, self.rMax)
         V = profile.velocity(self.R)
-        self.plot(V,331,'Rankine')
+        plot(V,331,'Rankine',vmin=self.vmin,vmax=self.vmax)
 
     def testJelesnianski(self):
         profile = JelesnianskiWindProfile(
             self.cLat, self.cLon, self.pEnv, self.pCentre, self.rMax)
         V = profile.velocity(self.R)
-        self.plot(V,332,'Jelesnianski')
+        plot(V,332,'Jelesnianski',vmin=self.vmin,vmax=self.vmax)
 
     def testHolland(self):
         profile = HollandWindProfile(self.cLat, self.cLon, self.pEnv,
                                      self.pCentre, self.rMax, self.beta)
         V = profile.velocity(self.R)
-        self.plot(V,333,'Holland')
+        plot(V,333,'Holland',vmin=self.vmin,vmax=self.vmax)
 
     def testWilloughby(self):
         profile = WilloughbyWindProfile(
             self.cLat, self.cLon, self.pEnv, self.pCentre, self.rMax)
         V = profile.velocity(self.R)
-        self.plot(V,334,'Willoughby')
+        plot(V,334,'Willoughby',vmin=self.vmin,vmax=self.vmax)
 
     def testPowell(self):
         profile = PowellWindProfile(
             self.cLat, self.cLon, self.pEnv, self.pCentre, self.rMax)
         V = profile.velocity(self.R)
-        self.plot(V,335,'Powell')
+        plot(V,335,'Powell',vmin=self.vmin,vmax=self.vmax)
 
     def testDoubleHolland(self):
         profile = DoubleHollandWindProfile(
             self.cLat, self.cLon, self.pEnv, self.pCentre, self.rMax,
             self.beta1, self.beta2, self.rMax2)
         V = profile.velocity(self.R)
-        self.plot(V,336,'doubleHolland')
+        plot(V,336,'doubleHolland',vmin=self.vmin,vmax=self.vmax)
 
     def testNewHolland(self):
         profile =NewHollandWindProfile(
             self.cLat, self.cLon, self.pEnv, self.pCentre, self.rMax)
         V = profile.velocity(self.R)
-        self.plot(V,337,'newHolland')
+        plot(V,337,'newHolland',vmin=self.vmin,vmax=self.vmax)
 
     def testNewHolland100(self):
         profile =NewHollandWindProfile(
             self.cLat, self.cLon, self.pEnv, self.pCentre, self.rMax,rGale=100)
         V = profile.velocity(self.R)
-        self.plot(V,338,'newHolland')
+        plot(V,338,'newHolland',vmin=self.vmin,vmax=self.vmax)
 
 
 class TestWindVorticity(NumpyTestCase.NumpyTestCase):
+    vmax=50
+    vmin=-50
 
     def setUp(self):
         pkl_file = open(os.path.join(unittest_dir, 'test_data', 'vorticityTestData.pck'), 'r')
@@ -129,21 +141,21 @@ class TestWindVorticity(NumpyTestCase.NumpyTestCase):
             self.cLat, self.cLon, self.pEnv, self.pCentre, self.rMax)
         profile.vMax = self.vMax
         V = profile.vorticity(self.R)
-        self.numpyAssertAlmostEqual(V, self.test_vorticity_rankine)
+        plot(V,331,'Rankine',vmin=self.vmin,vmax=self.vmax)
 
     def testJelesnianski(self):
         profile = JelesnianskiWindProfile(
             self.cLat, self.cLon, self.pEnv, self.pCentre, self.rMax)
         profile.vMax = self.vMax
         V = profile.vorticity(self.R)
-        self.numpyAssertAlmostEqual(V, self.test_vorticity_jelesnianski)
+        plot(V,332,'Jelesnianski',vmin=self.vmin,vmax=self.vmax)
 
     def testHolland(self):
         profile = HollandWindProfile(self.cLat, self.cLon, self.pEnv,
                                      self.pCentre, self.rMax, self.beta)
         profile.vMax = self.vMax
         V = profile.vorticity(self.R)
-        self.numpyAssertAlmostEqual(V, self.test_vorticity_holland)
+        plot(V,333,'Holland',vmin=self.vmin,vmax=self.vmax)
 
     def testWilloughby(self):
         profile = WilloughbyWindProfile(
@@ -152,7 +164,7 @@ class TestWindVorticity(NumpyTestCase.NumpyTestCase):
         profile.vMax = self.vMax
         profile.beta = 1.0036 + 0.0173 * profile.vMax - 0.313 * np.log(self.rMax) + 0.0087 * np.abs(self.cLat)
         V = profile.vorticity(self.R)
-        self.numpyAssertAlmostEqual(V, self.test_vorticity_willoughby)
+        plot(V,334,'Willoughby',vmin=self.vmin,vmax=self.vmax)
 
     def testDoubleHolland(self):
         profile = DoubleHollandWindProfile(
@@ -160,17 +172,19 @@ class TestWindVorticity(NumpyTestCase.NumpyTestCase):
             self.beta1, self.beta2, self.rMax2)
         profile.vMax = self.vMax
         V = profile.vorticity(self.R)
-        self.numpyAssertAlmostEqual(V, self.test_vorticity_doubleHolland)
+        plot(V,335,'DoubleHolland',vmin=self.vmin,vmax=self.vmax)
 
     def testPowell(self):
         profile = PowellWindProfile(
             self.cLat, self.cLon, self.pEnv, self.pCentre, self.rMax)
         profile.vMax = self.vMax
         V = profile.vorticity(self.R)
-        self.numpyAssertAlmostEqual(V, self.test_vorticity_powell)
+        plot(V,336,'Powell',vmin=self.vmin,vmax=self.vmax)
 
 
 class TestWindField(NumpyTestCase.NumpyTestCase):
+    vmin=0
+    vmax=50
 
     def setUp(self):
         pkl_file = open(os.path.join(unittest_dir, 'test_data', 'windFieldTestData.pck'), 'r')
@@ -199,8 +213,7 @@ class TestWindField(NumpyTestCase.NumpyTestCase):
         windField.Z = self.Z
 
         Ux, Vy = windField.field(self.R, self.lam, self.vFm, self.thetaFm, self.thetaMax)
-        self.numpyAssertAlmostEqual(Ux, self.test_kepert_Ux)
-        self.numpyAssertAlmostEqual(Vy, self.test_kepert_Vy)
+        plotvec(Ux,Vy,231,title='Kepert',vmin=self.vmin,vmax=self.vmax)
 
     def test_McConochie(self):
         profile = WindProfileModel(0.0, 0.0, 1000., 1000., self.rMax, WindSpeedModel)
@@ -209,8 +222,7 @@ class TestWindField(NumpyTestCase.NumpyTestCase):
         windField.V = self.V
         windField.Z = self.Z
         Ux, Vy = windField.field(self.R, self.lam, self.vFm, self.thetaFm, self.thetaMax)
-        self.numpyAssertAlmostEqual(Ux, self.test_mcconochie_Ux)
-        self.numpyAssertAlmostEqual(Vy, self.test_mcconochie_Vy)
+        plotvec(Ux,Vy,232,title='McConochie',vmin=self.vmin,vmax=self.vmax)
 
     def test_Hubbert(self):
         profile = WindProfileModel(0.0, 0.0, 1000., 1000., self.rMax, WindSpeedModel)
@@ -219,17 +231,20 @@ class TestWindField(NumpyTestCase.NumpyTestCase):
         windField.V = self.V
         windField.Z = self.Z
         Ux, Vy = windField.field(self.R, self.lam, self.vFm, self.thetaFm, self.thetaMax)
-        self.numpyAssertAlmostEqual(Ux, self.test_hubbert_Ux)
-        self.numpyAssertAlmostEqual(Vy, self.test_hubbert_Vy)
+        plotvec(Ux,Vy,233,title='Hubbert',vmin=self.vmin,vmax=self.vmax)
 
 if __name__ == "__main__":
-    testSuite = unittest.makeSuite(TestWindVelocity, 'test')
-    unittest.TextTestRunner(verbosity=2).run(testSuite)
-    plt.show()
+    # fig=plt.figure(figsize=(12,9))
+    # testSuite = unittest.makeSuite(TestWindVelocity, 'test')
+    # unittest.TextTestRunner(verbosity=2).run(testSuite)
 
+    # fig=plt.figure(figsize=(12,9))
     # testSuite = unittest.makeSuite(TestWindVorticity, 'test')
     # unittest.TextTestRunner(verbosity=2).run(testSuite)
+    # plt.show()
 
-    # testSuite = unittest.makeSuite(TestWindField, 'test')
-    # unittest.TextTestRunner(verbosity=2).run(testSuite)
+    fig=plt.figure(figsize=(12,6))
+    testSuite = unittest.makeSuite(TestWindField, 'test')
+    unittest.TextTestRunner(verbosity=2).run(testSuite)
+    plt.show()
 
