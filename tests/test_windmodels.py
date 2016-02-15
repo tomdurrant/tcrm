@@ -205,3 +205,5 @@ if __name__ == "__main__":
 
     testSuite = unittest.makeSuite(TestWindField, 'test')
     unittest.TextTestRunner(verbosity=2).run(testSuite)
+    plt.savefig('windfields.png')
+    plt.show()

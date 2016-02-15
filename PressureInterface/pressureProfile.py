@@ -156,6 +156,13 @@ class PrsProfile:
                            % (time.time()-t0))
         return P
 
+    def newholland(self, beta=None):
+        """
+        Holland profile.
+        """
+        return self.holland(beta=beta)
+
+
     def willoughby(self):
         """
         The Willoughby & Rahn (2004) relation, which makes beta a function of

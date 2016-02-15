@@ -85,3 +85,5 @@ if __name__ == "__main__":
     flStartLog('', 'CRITICAL', False)
     testSuite = unittest.makeSuite(TestPressureProfile,'test')
     unittest.TextTestRunner(verbosity=2).run(testSuite)
+    plt.savefig('profile_2d.png')
+    plt.show()
