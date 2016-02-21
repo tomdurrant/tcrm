@@ -127,6 +127,9 @@ PARSERS = {
     'WindfieldInterface_thetamax': float,
     'WindfieldInterface_trackfile': str,
     'WindfieldInterface_trackpath': str,
+    'WindfieldInterface_writewinds': parseBool,
+    'WindfieldInterface_blendwinds': parseBool,
+    'WindfieldInterface_timedelta': float,
     'WindfieldInterface_windfieldtype': str}
 
 DEFAULTS = """
@@ -177,6 +180,9 @@ Margin=2
 Resolution=0.05
 PlotOutput=False
 Domain=bounded
+writeWinds=False
+blendWinds=False
+timeDelta=1/12.
 
 [Hazard]
 Years=2,5,10,20,25,50,100,200,250,500,1000
