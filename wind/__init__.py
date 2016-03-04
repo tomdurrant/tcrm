@@ -29,6 +29,7 @@ calling the :meth:`run` with the location of a *configFile*::
 """
 
 import xray as xr
+from netCDF4 import Dataset, date2num
 import numpy as np
 import numpy.ma as ma
 import logging as log
@@ -38,6 +39,7 @@ import os
 import sys
 import windmodels
 from datetime import datetime
+import time as timemod
 from os.path import join as pjoin, split as psplit, splitext as psplitext
 from collections import defaultdict
 
@@ -98,10 +100,10 @@ class WindfieldAroundTrack(object):
 
     """
 
-    def __init__(self, track, profileType='powell', windFieldType='kepert',
+    def __init__(self, track, config, profileType='powell', windFieldType='kepert',
                  beta=1.3, beta1=1.5, beta2=1.4, thetaMax=70.0, margin=2.0,
                  resolution=0.05, gustFactor=1.188, gridLimit=None,
-                 domain='bounded',writeWinds=True, blendWinds=True):
+                 domain='bounded'):
         self.track = track
         self.profileType = profileType
         self.windFieldType = windFieldType
@@ -114,8 +116,7 @@ class WindfieldAroundTrack(object):
         self.gustFactor = gustFactor
         self.gridLimit = gridLimit
         self.domain = domain
-        self.writeWinds = writeWinds
-        self.blendWinds = blendWinds
+        self.config = config
 
     def polarGridAroundEye(self, i):
         """
@@ -223,6 +224,9 @@ class WindfieldAroundTrack(object):
         :type  timeStepCallback: function
         :param timeStepCallback: the function to be called on each time step.
         """
+        writeWinds = self.config.get('WindfieldInterface', 'writeWinds')
+        blendWinds = self.config.get('WindfieldInterface', 'blendWinds')
+
         if len(self.track.data) > 0:
             envPressure = convert(self.track.EnvPressure[0], 'hPa', 'Pa')
         else:
@@ -264,26 +268,49 @@ class WindfieldAroundTrack(object):
                                 (yMin <= self.track.Latitude) &
                                 (self.track.Latitude <= yMax))[0]
 
-        #delta = config.get('DataProcess', 'Delta')
-        if self.writeWinds:
-            if self.blendWinds:
+
+        if writeWinds:
+            timeDelta = self.config.get('WindfieldInterface', 'timeDelta')
+            outputPath = self.config.get('Output', 'Path')
+            windfieldPath = pjoin(outputPath, 'windfield')
+
+            vortex = pjoin(windfieldPath,
+                             'vortex.{0:03d}-{1:05d}.nc'.\
+                             format(*self.track.trackId))
+
+            vortexdset = create_nc(vortex,latGrid / 100.,lonGrid / 100.,)
+
+            if blendWinds:
+                windblend = pjoin(windfieldPath,
+                                 'blended.{0:03d}-{1:05d}.nc'.\
+                                 format(*self.track.trackId))
+
+                vars=['mslp','uwnd','vwnd','bw']
+                descs=['Pressure','uwind','vwnd','blend_weights']
+                units=['hPa','ms','ms','test']
+                blenddset = create_nc(windblend, latGrid / 100., lonGrid / 100.,
+                                      vars=vars, descs=descs, units=units)
+
+                background = pjoin(windfieldPath,
+                                 'background.{0:03d}-{1:05d}.nc'.\
+                                 format(*self.track.trackId))
+
                 from blend import getData
                 self.data = getData(self.track.Datetime[timesInRegion[0]],
                                     self.track.Datetime[timesInRegion[-1]],
                                     var=['ugrd10m','vgrd10m','mslp'],
                                     dset=['cfsr'],
+                                    outnc = background,
                                     bnd=[lonGrid.min()/100.,lonGrid.max()/100.,latGrid.min()/100.,latGrid.max()/100.],
                                     res=self.resolution, dt=1/2., # TODO - This is hardcoded for now, need to fix
                                     udshost='http://uds1.rag.metocean.co.nz:9191/uds')
-            # Initiate wind speed arrays
-            uwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
-            vwnd = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
-            mslp = np.ones((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f') * envPressure
-            bweights = np.zeros((timesInRegion.size,latGrid.size,lonGrid.size), dtype='f')
-            times = []
 
-        nn = 0
         for i in timesInRegion:
+
+            uwnd = np.zeros((latGrid.size,lonGrid.size), dtype='f')
+            vwnd = np.zeros((latGrid.size,lonGrid.size), dtype='f')
+            mslp = np.ones((latGrid.size,lonGrid.size), dtype='f') * envPressure
+            bweights = np.zeros((latGrid.size,lonGrid.size), dtype='f')
 
             # Map the local grid to the regional grid
             jmin, jmax = 0, int((maxLat - minLat + 2. * gridMargin) \
@@ -334,41 +361,36 @@ class WindfieldAroundTrack(object):
                 P, pressure[jmin:jmax, imin:imax])
 
             # Write u and v where valid
-            if self.writeWinds:
-                mslp[nn, jmin:jmax, imin:imax] = P
-                uwnd[nn, jmin:jmax, imin:imax] = Ux
-                vwnd[nn, jmin:jmax, imin:imax] = Vy
-                if self.blendWinds:
-                    bweights[nn, jmin:jmax, imin:imax] = bw
-                times.append(self.track.Datetime[i])
-            nn += 1
+            if writeWinds:
+                mslp[jmin:jmax, imin:imax] = P
+                uwnd[jmin:jmax, imin:imax] = Ux
+                vwnd[jmin:jmax, imin:imax] = Vy
+                rectime = self.track.Datetime[i]
+                write_record(vortex,rectime,{'mslp':mslp, 'uwnd':uwnd,
+                                             'vwnd':vwnd})
 
-        if self.writeWinds:
-            dset = xr.Dataset({'lat': latGrid / 100.,
-                     'lon': lonGrid / 100.,
-                     'time': times,
-                     'mslp': (['time', 'lat', 'lon'], mslp),
-                     'uwnd': (['time', 'lat', 'lon'], uwnd),
-                     'vwnd': (['time', 'lat', 'lon'], vwnd),
-                     'bweights': (['time', 'lat', 'lon'], bweights),
-                     })
-            if self.blendWinds:
-                bground = self.data.dset.sel(time = dset['time'],method='nearest')
-                if np.allclose(bground.lat.values, dset.lat.values):
-                    bground.coords['lat'] = dset.coords['lat']
-                if np.allclose(bground.lon.values, dset.lon.values):
-                    bground.coords['lon'] = dset.coords['lon']
-                bground.to_netcdf('bgound.nc')
-                bground = bground.rename({'mslp': 'mslp_bg', 'ugrd10m': 'uwnd_bg', 'vgrd10m': 'vwnd_bg'})
-                dset = dset.rename({'mslp': 'mslp_tc', 'uwnd': 'uwnd_tc', 'vwnd': 'vwnd_tc'})
-                dset.update(bground)
-                dset['mslp'] = (dset.mslp_tc * dset.bweights) + (dset.mslp_bg * (1 - dset.bweights))
-                dset['uwnd'] = (dset.uwnd_tc * dset.bweights) + (dset.uwnd_bg * (1 - dset.bweights))
-                dset['vwnd'] = (dset.vwnd_tc * dset.bweights) + (dset.vwnd_bg * (1 - dset.bweights))
-        else:
-            dset = None
+                if blendWinds:
+                    bweights[jmin:jmax, imin:imax] = bw
+                    bground = self.data.dset.sel(time = rectime, method='nearest')
+                    if np.allclose(bground.lat.values, latGrid / 100.):
+                        bground.coords['lat'] = latGrid / 100.
+                    if np.allclose(bground.lon.values, lonGrid / 100.):
+                        bground.coords['lon'] = lonGrid / 100.
+                    # bground.to_netcdf('bgound.nc')
+                    #bground = bground.rename({'mslp': 'mslp_bg', 'ugrd10m': 'uwnd_bg', 'vgrd10m': 'vwnd_bg'})
+                    #dset = dset.rename({'mslp': 'mslp_tc', 'uwnd': 'uwnd_tc', 'vwnd': 'vwnd_tc'})
+                    #dset.update(bground)
+                    mslpb = (mslp * bweights) + (bground.mslp * (1 - bweights))
+                    uwndb = (uwnd * bweights) + (bground.ugrd10m * (1 - bweights))
+                    vwndb = (vwnd * bweights) + (bground.vgrd10m * (1 - bweights))
+                    mslpb.plot()
+                    import matplotlib.pyplot as plt
+                    write_record(windblend, rectime, {'mslp':mslpb.values,
+                                                      'uwnd':uwndb.values,
+                                                      'vwnd':vwndb.values,
+                                                      'bw':bweights})
 
-        return gust, bearing, UU, VV, pressure, lonGrid / 100., latGrid / 100., dset
+        return gust, bearing, UU, VV, pressure, lonGrid / 100., latGrid / 100.
 
 
 
@@ -466,6 +488,7 @@ class WindfieldGenerator(object):
             self.setGridLimit(track)
 
         wt = WindfieldAroundTrack(track,
+                                  self.config,
                                   profileType=self.profileType,
                                   windFieldType=self.windFieldType,
                                   beta=self.beta,
@@ -510,7 +533,7 @@ class WindfieldGenerator(object):
             Vy = np.where(gust1 > gust, Vy1, Vy)
             P = np.where(P1 < P, P1, P)
 
-        return (gust, bearing, Vx, Vy, P, lon, lat, dset)
+        return (gust, bearing, Vx, Vy, P, lon, lat)
 
     def dumpGustsFromTracks(self, trackiter, windfieldPath,
                             timeStepCallback=None):
@@ -544,7 +567,7 @@ class WindfieldGenerator(object):
         for track, result in results:
             log.debug("Saving data for track {0:03d}-{1:05d}"\
                       .format(*track.trackId))
-            gust, bearing, Vx, Vy, P, lon, lat, dset = result
+            gust, bearing, Vx, Vy, P, lon, lat = result
 
             dumpfile = pjoin(windfieldPath,
                              'gust.{0:03d}-{1:05d}.nc'.\
@@ -558,7 +581,7 @@ class WindfieldGenerator(object):
             windfile = pjoin(windfieldPath,
                              'winds.{0:03d}-{1:05d}.nc'.\
                              format(*track.trackId))
-            self.saveWindToFile(track.trackfile,dset,windfile)
+            #self.saveWindToFile(track.trackfile,dset,windfile)
             #self.plotGustToFile((lat, lon, gust, Vx, Vy, P), plotfile)
 
     def plotGustToFile(self, result, filename):
@@ -807,6 +830,46 @@ def loadTracks(trackfile):
     return tracks
 
 
+def create_nc(filename, lats, lons, vars=['mslp','uwnd','vwnd'],
+              descs=['Pressure','uwind','vwnd'],
+              units=['hPa','ms-1','ms-1'],
+              time_ref=datetime(1979,01,01)):
+
+    log.info('Creating  splitting netcdf file %s...'% filename)
+    with Dataset(filename, 'w', format='NETCDF4') as nc:
+        # Global attributes
+        nc.Description = 'MetOcean Solutions Model Results'
+        nc.history = 'Created ' + timemod.ctime(timemod.time())
+
+        # Dimensions
+        time = nc.createDimension('time', None)
+        lat = nc.createDimension('lat', lats.size)
+        lon = nc.createDimension('lon', lons.size)
+
+        # Variables
+        latnc = nc.createVariable('lat', 'f4', ('lat',))
+        lonnc = nc.createVariable('lon', 'f4', ('lon',))
+        timenc = nc.createVariable('time', 'i4', ('time',))
+        timenc.units = time_ref.strftime('seconds since %Y-01-01T00:00:00 UTC')
+        latnc[:] = lats
+        lonnc[:] = lons
+        ncvars={}
+        for var in vars:
+            ncvars[var] = nc.createVariable(var ,'f4', ('time','lat','lon'))
+
+        for var, unit, desc, in zip(vars, units, descs,):
+            setattr(ncvars[var], 'units', unit)
+            setattr(ncvars[var], 'description', desc)
+
+def write_record(filename, dt, record={}):
+    log.info('Writing record to file %s...'% filename)
+    with Dataset(filename, 'a') as nc:
+        times = nc.variables['time']
+        dim=times.size
+        rectime = date2num(dt,units=times.units)
+        for var, data in record.items():
+            nc.variables[var][dim,:,:]=data
+
 def loadTracksFromPath(path):
     """
     Helper function to obtain a generator that yields :class:`Track` objects
@@ -823,6 +886,13 @@ def loadTracksFromPath(path):
     msg = 'Processing %d track files in %s' % (len(trackfiles), path)
     log.info(msg)
     return loadTracksFromFiles(sorted(trackfiles))
+
+def append_record(ncfile,time,record_dict):
+    data = xr.open_dataset(ncfile)
+    rec = data.time.size + 1
+    data[time][rec] = time
+    for var, dat in record_dict.items():
+        data[var]
 
 
 def balanced(iterable):
@@ -856,6 +926,9 @@ def run(configFile, callback=None):
 
     profileType = config.get('WindfieldInterface', 'profileType')
     windFieldType = config.get('WindfieldInterface', 'windFieldType')
+    writeWinds = config.get('WindfieldInterface', 'writeWinds')
+    blendWinds = config.get('WindfieldInterface', 'blendWinds')
+    timeDelta = config.get('WindfieldInterface', 'timeDelta')
     beta = config.getfloat('WindfieldInterface', 'beta')
     beta1 = config.getfloat('WindfieldInterface', 'beta1')
     beta2 = config.getfloat('WindfieldInterface', 'beta2')

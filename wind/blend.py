@@ -35,6 +35,7 @@ class getData(object):
         self.udsctls = udsctls
         self.udsconfig = udsconfig
         self.dt=dt
+        self.outnc = outnc
         self.nx = (bnd[1] - bnd[0])/res + 1
         self.ny = (bnd[3] - bnd[2])/res + 1
         # Put standard variables in qdict
@@ -79,24 +80,24 @@ class getData(object):
         query = Query(self.qdict)
         log.debug("Query %s" % query)
         #outnc = tempfile.mktemp()
-        outnc = str("uds-%s-%s.nc" % (self.qdict['time'][0],self.qdict['time'][1]))
-        if os.path.isfile(outnc):
-            log.info("Using already downloaded file %s" % outnc)
-            self.filename = outnc
+        #outnc = str("uds-%s-%s.nc" % (self.qdict['time'][0],self.qdict['time'][1]))
+        if os.path.isfile(self.outnc):
+            log.info("Using already downloaded file %s" % self.outnc)
+            self.filename = self.outnc
         else:
             if self.udshost:
                 nc = None
                 url = self.udshost + '?' + query.str()
                 log.info('Requesting url ' + url)
-                log.info('Saving file to %s' % outnc)
-                self.filename, headers = urllib.urlretrieve(url, outnc)
+                log.info('Saving file to %s' % self.outnc)
+                self.filename, headers = urllib.urlretrieve(url, self.outnc)
             elif self.udsctls:
                 uds = UDS(ctlfile=self.udsctls) 
                 uds.logger = log
                 uds.getDSList(query)
-                uds.getData(query, outnc)
-                log.debug('Saving file to %s' % outnc)
-                self.filename = outnc
+                uds.getData(query, self.outnc)
+                log.debug('Saving file to %s' % self.outnc)
+                self.filename = self.outnc
         self.dset = xr.open_dataset(self.filename)
 
 def test():
