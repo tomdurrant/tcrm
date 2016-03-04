@@ -129,7 +129,7 @@ PARSERS = {
     'WindfieldInterface_trackpath': str,
     'WindfieldInterface_writewinds': parseBool,
     'WindfieldInterface_blendwinds': parseBool,
-    'WindfieldInterface_timedelta': float,
+    'WindfieldInterface_dtout': float,
     'WindfieldInterface_windfieldtype': str}
 
 DEFAULTS = """
@@ -182,7 +182,7 @@ PlotOutput=False
 Domain=bounded
 writeWinds=False
 blendWinds=False
-timeDelta=1/12.
+dtout=0.1
 
 [Hazard]
 Years=2,5,10,20,25,50,100,200,250,500,1000

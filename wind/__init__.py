@@ -226,7 +226,6 @@ class WindfieldAroundTrack(object):
         """
         writeWinds = self.config.get('WindfieldInterface', 'writeWinds')
         blendWinds = self.config.get('WindfieldInterface', 'blendWinds')
-
         if len(self.track.data) > 0:
             envPressure = convert(self.track.EnvPressure[0], 'hPa', 'Pa')
         else:
@@ -270,7 +269,7 @@ class WindfieldAroundTrack(object):
 
 
         if writeWinds:
-            timeDelta = self.config.get('WindfieldInterface', 'timeDelta')
+            dtout = self.config.getfloat('WindfieldInterface', 'dtout')
             outputPath = self.config.get('Output', 'Path')
             windfieldPath = pjoin(outputPath, 'windfield')
 
@@ -302,7 +301,7 @@ class WindfieldAroundTrack(object):
                                     dset=['cfsr'],
                                     outnc = background,
                                     bnd=[lonGrid.min()/100.,lonGrid.max()/100.,latGrid.min()/100.,latGrid.max()/100.],
-                                    res=self.resolution, dt=1/2., # TODO - This is hardcoded for now, need to fix
+                                    res=self.resolution, dt=dtout,
                                     udshost='http://uds1.rag.metocean.co.nz:9191/uds')
 
         for i in timesInRegion:
@@ -928,7 +927,7 @@ def run(configFile, callback=None):
     windFieldType = config.get('WindfieldInterface', 'windFieldType')
     writeWinds = config.get('WindfieldInterface', 'writeWinds')
     blendWinds = config.get('WindfieldInterface', 'blendWinds')
-    timeDelta = config.get('WindfieldInterface', 'timeDelta')
+    dtout = config.getfloat('WindfieldInterface', 'dtout')
     beta = config.getfloat('WindfieldInterface', 'beta')
     beta1 = config.getfloat('WindfieldInterface', 'beta1')
     beta2 = config.getfloat('WindfieldInterface', 'beta2')

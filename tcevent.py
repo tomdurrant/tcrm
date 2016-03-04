@@ -175,13 +175,13 @@ def main(configFile):
 
     trackFile = config.get('DataProcess', 'InputFile')
     source = config.get('DataProcess', 'Source')
-    delta = 1/2.
+    dtout = config.getfloat('WindfieldInterface', 'dtout')
     outputPath = pjoin(config.get('Output','Path'), 'tracks')
     outputTrackFile = pjoin(outputPath, "tracks.interp.nc")
 
     # This will save interpolated track data in TCRM format:
     interpTrack = interpolateTracks.parseTracks(configFile, trackFile,
-                                                source, delta,
+                                                source, dtout,
                                                 outputTrackFile,
                                                 interpolation_type='akima')
 
