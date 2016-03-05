@@ -382,8 +382,6 @@ class WindfieldAroundTrack(object):
                     mslpb = (mslp * bweights) + (bground.mslp * (1 - bweights))
                     uwndb = (uwnd * bweights) + (bground.ugrd10m * (1 - bweights))
                     vwndb = (vwnd * bweights) + (bground.vgrd10m * (1 - bweights))
-                    mslpb.plot()
-                    import matplotlib.pyplot as plt
                     write_record(windblend, rectime, {'mslp':mslpb.values,
                                                       'uwnd':uwndb.values,
                                                       'vwnd':vwndb.values,
@@ -834,7 +832,7 @@ def create_nc(filename, lats, lons, vars=['mslp','uwnd','vwnd'],
               units=['hPa','ms-1','ms-1'],
               time_ref=datetime(1979,01,01)):
 
-    log.info('Creating  splitting netcdf file %s...'% filename)
+    log.info('Creating output file %s...'% filename)
     with Dataset(filename, 'w', format='NETCDF4') as nc:
         # Global attributes
         nc.Description = 'MetOcean Solutions Model Results'
@@ -861,7 +859,7 @@ def create_nc(filename, lats, lons, vars=['mslp','uwnd','vwnd'],
             setattr(ncvars[var], 'description', desc)
 
 def write_record(filename, dt, record={}):
-    log.info('Writing record to file %s...'% filename)
+    log.debug('Writing record to file %s...'% filename)
     with Dataset(filename, 'a') as nc:
         times = nc.variables['time']
         dim=times.size
@@ -925,8 +923,8 @@ def run(configFile, callback=None):
 
     profileType = config.get('WindfieldInterface', 'profileType')
     windFieldType = config.get('WindfieldInterface', 'windFieldType')
-    writeWinds = config.get('WindfieldInterface', 'writeWinds')
-    blendWinds = config.get('WindfieldInterface', 'blendWinds')
+    writeWinds = config.getboolean('WindfieldInterface', 'writeWinds')
+    blendWinds = config.getboolean('WindfieldInterface', 'blendWinds')
     dtout = config.getfloat('WindfieldInterface', 'dtout')
     beta = config.getfloat('WindfieldInterface', 'beta')
     beta1 = config.getfloat('WindfieldInterface', 'beta1')

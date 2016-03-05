@@ -185,7 +185,7 @@ def main(configFile):
                                                 outputTrackFile,
                                                 interpolation_type='akima')
 
-    showProgressBar = config.get('Logging', 'ProgressBar')
+    showProgressBar = config.getboolean('Logging', 'ProgressBar')
 
     pbar = ProgressBar('Calculating wind fields: ', showProgressBar)
 
