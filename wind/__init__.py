@@ -224,8 +224,8 @@ class WindfieldAroundTrack(object):
         :type  timeStepCallback: function
         :param timeStepCallback: the function to be called on each time step.
         """
-        writeWinds = self.config.get('WindfieldInterface', 'writeWinds')
-        blendWinds = self.config.get('WindfieldInterface', 'blendWinds')
+        writeWinds = self.config.getboolean('WindfieldInterface', 'writeWinds')
+        blendWinds = self.config.getboolean('WindfieldInterface', 'blendWinds')
         if len(self.track.data) > 0:
             envPressure = convert(self.track.EnvPressure[0], 'hPa', 'Pa')
         else:
@@ -860,10 +860,11 @@ def create_nc(filename, lats, lons, vars=['mslp','uwnd','vwnd'],
 
 def write_record(filename, dt, record={}):
     log.debug('Writing record to file %s...'% filename)
+    recdt = datetime(dt.year, dt.month, dt.day, dt.hour, dt.second)
     with Dataset(filename, 'a') as nc:
         times = nc.variables['time']
         dim=times.size
-        rectime = date2num(dt,units=times.units)
+        rectime = date2num(recdt,units=times.units)
         for var, data in record.items():
             nc.variables[var][dim,:,:]=data
 
