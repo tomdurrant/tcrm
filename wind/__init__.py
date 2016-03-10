@@ -277,7 +277,8 @@ class WindfieldAroundTrack(object):
                              'vortex.{0:03d}-{1:05d}.nc'.\
                              format(*self.track.trackId))
 
-            vortexdset = create_nc(vortex,latGrid / 100.,lonGrid / 100.,)
+            vortexdset = create_nc(vortex,latGrid / 100.,lonGrid / 100.,
+                                   self.track.trackfile, self.config)
 
             if blendWinds:
                 windblend = pjoin(windfieldPath,
@@ -287,7 +288,8 @@ class WindfieldAroundTrack(object):
                 vars=['mslp','uwnd','vwnd','bw']
                 descs=['Pressure','uwind','vwnd','blend_weights']
                 units=['hPa','ms','ms','test']
-                blenddset = create_nc(windblend, latGrid / 100., lonGrid / 100.,
+                blenddset = create_nc(windblend, latGrid / 100., lonGrid /
+                                      100., self.track.trackfile, self.config,
                                       vars=vars, descs=descs, units=units)
 
                 background = pjoin(windfieldPath,
@@ -827,16 +829,40 @@ def loadTracks(trackfile):
     return tracks
 
 
-def create_nc(filename, lats, lons, vars=['mslp','uwnd','vwnd'],
+def create_nc(filename, lats, lons, trackfile, config, vars=['mslp','uwnd','vwnd'],
               descs=['Pressure','uwind','vwnd'],
               units=['hPa','ms-1','ms-1'],
               time_ref=datetime(1979,01,01)):
+
+    trackfileDate = flModDate(trackfile)
+    profileType = config.get('WindfieldInterface', 'profileType')
+    windFieldType = config.get('WindfieldInterface', 'windFieldType')
+    beta = config.getfloat('WindfieldInterface', 'beta')
+
+    gatts = {
+        'title': 'TCRM hazard simulation - synthetic event wind field',
+        'tcrm_version': flProgramVersion(),
+        'python_version': sys.version,
+        'track_file': trackfile,
+        'track_file_date': trackfileDate,
+        'radial_profile': profileType,
+        'boundary_layer': windFieldType,
+        'beta': beta}
+
+    # Add configuration settings to global attributes:
+    for section in config.sections():
+        for option in config.options(section):
+            key = "{0}_{1}".format(section, option)
+            value = config.get(section, option)
+            gatts[key] = value
 
     log.info('Creating output file %s...'% filename)
     with Dataset(filename, 'w', format='NETCDF4') as nc:
         # Global attributes
         nc.Description = 'MetOcean Solutions Model Results'
         nc.history = 'Created ' + timemod.ctime(timemod.time())
+        for key,val in gatts.items():
+            setattr(nc,key,val)
 
         # Dimensions
         time = nc.createDimension('time', None)
