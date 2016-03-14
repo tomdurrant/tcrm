@@ -1,6 +1,6 @@
 import numpy as np
 
-def gauss(x, mu, sig):
+def gauss(x, sig, mu=0):
     """
     Return x from a gaussian distribution
 
@@ -19,5 +19,8 @@ def tophat(x, delta):
     :param delta: value < delta set to 1
     """
     ret = np.zeros_like(x)
-    ret[x < delta] = 1
+    ret[np.abs(x) < delta] = 1
     return ret
+
+def convolved(x, sig):
+    return np.max(gauss(x, sig), tophat(x, sig))

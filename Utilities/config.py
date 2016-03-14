@@ -129,6 +129,8 @@ PARSERS = {
     'WindfieldInterface_trackpath': str,
     'WindfieldInterface_writewinds': parseBool,
     'WindfieldInterface_blendwinds': parseBool,
+    'WindfieldInterface_blendwindsmethod': str,
+    'WindfieldInterface_radiusfactor': float,
     'WindfieldInterface_dtout': float,
     'WindfieldInterface_windfieldtype': str}
 
@@ -182,6 +184,8 @@ PlotOutput=False
 Domain=bounded
 writeWinds=False
 blendWinds=False
+blendWindsMethod=rGale
+radiusFactor=1.5
 dtout=0.1
 
 [Hazard]

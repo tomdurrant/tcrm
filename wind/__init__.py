@@ -204,7 +204,20 @@ class WindfieldAroundTrack(object):
 
         Ux, Vy = windfield.field(R, theta, vFm, thetaFm,  thetaMax)
 
-        bweights = windfield.blendWeights(R)
+        blendWinds = self.config.getboolean('WindfieldInterface', 'blendWinds')
+        blendWindsMethod = self.config.get('WindfieldInterface', 'blendWindsMethod')
+        radiusFactor = self.config.getfloat('WindfieldInterface', 'radiusFactor')
+        if blendWinds:
+            from blend import blendWeights
+            if blendWindsMethod == 'rGale':
+                sig = self.rGale * radiusFactor
+            elif blendWindsMethod == 'rMax':
+                sig = rMax * radiusFactor
+            else:
+                raise Exception("Blendmethod %s not recognised" % blendWindsMethod)
+            bweights = blendWeights(R,sig)
+        else:
+            bweights = None
 
         return (Ux, Vy, P, bweights)
 

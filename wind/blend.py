@@ -100,6 +100,17 @@ class getData(object):
                 self.filename = self.outnc
         self.dset = xr.open_dataset(self.filename)
 
+def blendWeights(R, sig, mu=0):
+    """
+    The weights for blending of wind field.
+    R   :: Radial distance from centre of cycle
+    sig :: Standard deviation of guassion distribution
+    mu  :: Mean of guassion distribution
+    """
+    from Utilities.distributions import gauss
+    return gauss(R,mu,sig)
+
+
 def test():
     t0 = datetime(2000,01,02)
     t1 = datetime(2000,01,02,06)
