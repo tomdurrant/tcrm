@@ -778,6 +778,7 @@ class NewHollandWindProfile(WindProfileModel):
         WindProfileModel.__init__(self, lat, lon, eP, cP, rMax,
                                   windSpeedModel=windSpeedModel)
         log.warn("Applying HollandWindSpeed, this needs to be checked")
+        log.debug("rGale: %s" % rGale)
         self.rGale = rGale
 
     def velocity(self, R):

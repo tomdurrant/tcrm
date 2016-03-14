@@ -32,17 +32,17 @@ log.addHandler(logging.NullHandler())
 trackFields = ('Indicator', 'CycloneNumber', 'Year', 'Month',
                'Day', 'Hour', 'Minute', 'TimeElapsed', 'Datetime', 'Longitude',
                'Latitude', 'Speed', 'Bearing', 'CentralPressure',
-               'WindSpeed', 'rMax', 'EnvPressure')
+               'WindSpeed', 'rMax', 'EnvPressure', 'rGale')
 
 trackTypes = ('i', 'i', 'i', 'i',
               'i', 'i', 'i', 'f', datetime,
               'f', 'f', 'f', 'f', 'f',
-              'f', 'f', 'f')
+              'f', 'f', 'f', 'f')
 
 trackFormats = ('%i, %i, %i, %i,'
                 '%i, %i, %i, %5.1f,' '%s',
                 '%8.3f, %8.3f, %6.2f, %6.2f, %7.2f,'
-                '%6.2f, %6.2f, %7.2f')
+                '%6.2f, %6.2f, %7.2f', '%6.2f')
 
 PATTERN = re.compile(r'\d+')
 
@@ -144,12 +144,12 @@ class Track(object):
 ISO_FORMAT = "%Y-%m-%d %H:%M:%S"
 TCRM_COLS = ('CycloneNumber', 'Datetime', 'TimeElapsed', 'Longitude',
              'Latitude', 'Speed', 'Bearing', 'CentralPressure',
-             'EnvPressure', 'rMax')
+             'EnvPressure', 'rMax', 'rGale')
 
 TCRM_UNIT = ('', '', 'hr', 'degree', 'degree', 'kph', 'degrees',
-                  'hPa', 'hPa', 'km')
+                  'hPa', 'hPa', 'km', 'km')
 
-TCRM_FMTS = ('i', 'object', 'f', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8')
+TCRM_FMTS = ('i', 'object', 'f', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8')
 
 TCRM_CNVT = {
     0: lambda s: int(float(s.strip() or 0)),

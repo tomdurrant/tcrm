@@ -17,21 +17,21 @@ TRACKFILE_COLS = ('Indicator', 'CycloneNumber', 'Year', 'Month',
                   'Day', 'Hour', 'Minute', 'TimeElapsed', 'Datetime',
                   'Longitude', 'Latitude', 'Speed', 'Bearing',
                   'CentralPressure', 'WindSpeed', 'rMax',
-                  'EnvPressure')
+                  'EnvPressure', 'rGale')
 
 TRACKFILE_FMTS = ('i', 'i', 'i', 'i',
                   'i', 'i', 'i', 'f', datetime,
                   'f', 'f', 'f', 'f', 'f',
-                  'f', 'f', 'f', 'f')
+                  'f', 'f', 'f', 'f', 'f')
 
 TRACKFILE_OUTFMT = ('%i,%i,%i,%i,'
                     '%i,%i,%i,%8.3f,%s,%5.1f,'
                     '%8.3f,%8.3f,%6.2f,%6.2f,%7.2f,'
-                    '%6.2f,%6.2f,%7.2f')
+                    '%6.2f,%6.2f,%7.2f,%6.2f')
 
 OUTPUT_COLS = ('CycloneNumber', 'Datetime', 'TimeElapsed', 'Longitude',
                   'Latitude', 'Speed', 'Bearing', 'CentralPressure',
-                  'EnvPressure', 'rMax')
+                  'EnvPressure', 'rMax', 'rGale')
 
 OUTPUT_FMTS = '%i,%s,%7.3f,%8.3f,%8.3f,%6.2f,%6.2f,%7.2f,%7.2f,%6.2f'
 
@@ -117,6 +117,7 @@ def interpolate(track, delta, interpolation_type=None):
 
         npEnv = interp1d(timestep, track.EnvPressure, kind='linear')(newtime)
         nrMax = interp1d(timestep, track.rMax, kind='linear')(newtime)
+        nrGale = interp1d(timestep, track.rGale, kind='linear')(newtime)
 
     else:
         if interpolation_type == 'akima':
@@ -181,6 +182,7 @@ def interpolate(track, delta, interpolation_type=None):
 
         npEnv = interp1d(timestep, track.EnvPressure, kind='linear')(newtime)
         nrMax = interp1d(timestep, track.rMax, kind='linear')(newtime)
+        nrGale = interp1d(timestep, track.rGale, kind='linear')(newtime)
 
     if len(nLat) >= 2:
         bear_, dist_ = latLon2Azi(nLat, nLon, 1, azimuth=0)
@@ -217,7 +219,7 @@ def interpolate(track, delta, interpolation_type=None):
     for key, val in zip(TRACKFILE_COLS,
                         [newindex, newTCID, nYear, nMonth, nDay, nHour, nMin,
                            newtime, newdates, nLon, nLat, nvFm, nthetaFm,
-                           npCentre, nwSpd, nrMax, npEnv]):
+                           npCentre, nwSpd, nrMax, npEnv, nrGale]):
         newdata[key] = val
     newtrack = Track(newdata)
     newtrack.trackId = track.trackId

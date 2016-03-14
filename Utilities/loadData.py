@@ -877,6 +877,16 @@ def loadTrackFile(configFile, trackFile, source, missingValue=0,
         LOG.debug("No radius to max wind data - all values will be zero")
         rmax = np.zeros(indicator.size, 'f')
 
+    try:
+        rGale = np.array(inputData['rGale'])
+        novalue_index = np.where(rGale == missingValue)
+        rGale = metutils.convert(rGale, inputLengthUnits, "km")
+        rGale[novalue_index] = missingValue
+
+    except (ValueError, KeyError):
+        LOG.debug("No radius to galse wind data - all values will be zero")
+        rGale = np.zeros(indicator.size, 'f')
+
     if 'penv' in inputData.dtype.names:
         penv = np.array(inputData['penv'], 'd')
     else:
@@ -920,7 +930,7 @@ def loadTrackFile(configFile, trackFile, source, missingValue=0,
                           [indicator, TCID, year, month,
                            day, hour, minute, timeElapsed,
                            datetimes, lon, lat, speed, bearing,
-                           pressure, windspeed, rmax, poci]):
+                           pressure, windspeed, rmax, poci, rGale]):
         data[key] = value
 
     tracks = []
