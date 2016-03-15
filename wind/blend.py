@@ -108,7 +108,7 @@ def blendWeights(R, sig, mu=0):
     mu  :: Mean of guassion distribution
     """
     from Utilities.distributions import gauss
-    return gauss(R,mu,sig)
+    return gauss(R,sig,mu)
 
 
 def test():
