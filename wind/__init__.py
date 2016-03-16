@@ -204,9 +204,9 @@ class WindfieldAroundTrack(object):
 
         Ux, Vy = windfield.field(R, theta, vFm, thetaFm,  thetaMax)
 
-        blendWinds = self.config.getboolean('WindfieldInterface', 'blendWinds')
-        blendWindsMethod = self.config.get('WindfieldInterface', 'blendWindsMethod')
-        radiusFactor = self.config.getfloat('WindfieldInterface', 'radiusFactor')
+        blendWinds = self.config.getboolean('WindBlend', 'blendWinds')
+        blendWindsMethod = self.config.get('WindBlend', 'blendWindsMethod')
+        radiusFactor = self.config.getfloat('WindBlend', 'radiusFactor')
         if blendWinds:
             from blend import blendWeights
             if blendWindsMethod == 'rGale':
@@ -239,7 +239,7 @@ class WindfieldAroundTrack(object):
         :param timeStepCallback: the function to be called on each time step.
         """
         writeWinds = self.config.getboolean('WindfieldInterface', 'writeWinds')
-        blendWinds = self.config.getboolean('WindfieldInterface', 'blendWinds')
+        blendWinds = self.config.getboolean('WindBlend', 'blendWinds')
         if len(self.track.data) > 0:
             envPressure = convert(self.track.EnvPressure[0], 'hPa', 'Pa')
         else:
@@ -311,14 +311,24 @@ class WindfieldAroundTrack(object):
                                  format(*self.track.trackId))
 
                 from blend import getData
+                udsdset = self.config.get('WindBlend', 'udsdset')
+                udsres = self.config.getfloat('WindBlend', 'udsres')
+                udshost = self.config.get('WindBlend', 'udshost')
+                udsconfig = self.config.get('WindBlend', 'udsconfig')
+                udsvars = self.config.get('WindBlend', 'udsvars').split(',')
                 self.data = getData(self.track.Datetime[timesInRegion[0]],
                                     self.track.Datetime[timesInRegion[-1]],
-                                    var=['ugrd10m','vgrd10m','mslp'],
-                                    dset=['cfsr'],
+                                    var=udsvars,
+                                    dset=[udsdset],
                                     outnc = background,
                                     bnd=[lonGrid.min()/100.,lonGrid.max()/100.,latGrid.min()/100.,latGrid.max()/100.],
-                                    res=self.resolution, dt=dtout,
-                                    udshost='http://uds1.rag.metocean.co.nz:9191/uds')
+                                    res=udsres,
+                                    dt=dtout,
+                                    udshost=udshost)
+                if udsres == self.resolution:
+                    log.info("UDS resolution matches output resolution")
+                else:
+                    log.info("Interpolating from udsres %s to native res %s" % (udsres, self.resolution))
 
         for i in timesInRegion:
 
@@ -386,15 +396,24 @@ class WindfieldAroundTrack(object):
 
                 if blendWinds:
                     bweights[jmin:jmax, imin:imax] = bw
-                    bground = self.data.dset.sel(time = rectime, method='nearest')
-                    if np.allclose(bground.lat.values, latGrid / 100.):
-                        bground.coords['lat'] = latGrid / 100.
-                    if np.allclose(bground.lon.values, lonGrid / 100.):
-                        bground.coords['lon'] = lonGrid / 100.
-                    # bground.to_netcdf('bgound.nc')
-                    #bground = bground.rename({'mslp': 'mslp_bg', 'ugrd10m': 'uwnd_bg', 'vgrd10m': 'vwnd_bg'})
-                    #dset = dset.rename({'mslp': 'mslp_tc', 'uwnd': 'uwnd_tc', 'vwnd': 'vwnd_tc'})
-                    #dset.update(bground)
+                    if udsres == self.resolution:
+                        bground = self.data.dset.sel(time = rectime, method='nearest')
+                    else:
+                        from scipy.interpolate import interp2d
+                        lonout = np.arange(self.data.dset.lon.min(),
+                                           self.data.dset.lon.max()+self.resolution/2,
+                                           self.resolution)
+                        latout = np.arange(self.data.dset.lat.min(),
+                                           self.data.dset.lat.max()+self.resolution/2,
+                                           self.resolution)
+                        bground = xr.Dataset(variables=None, coords={'lon':lonout,'lat':latout})
+                        data = self.data.dset.sel(time = rectime, method='nearest')
+                        for var in udsvars:
+                            f = interp2d(self.data.dset.lon.values,
+                                         self.data.dset.lat.values, 
+                                         data[var].values,
+                                         kind='cubic')
+                            bground[var] = (['lat','lon'],f(lonout,latout))
                     mslpb = (mslp * bweights) + (bground.mslp * (1 - bweights))
                     uwndb = (uwnd * bweights) + (bground.ugrd10m * (1 - bweights))
                     vwndb = (vwnd * bweights) + (bground.vgrd10m * (1 - bweights))
@@ -965,7 +984,7 @@ def run(configFile, callback=None):
     profileType = config.get('WindfieldInterface', 'profileType')
     windFieldType = config.get('WindfieldInterface', 'windFieldType')
     writeWinds = config.getboolean('WindfieldInterface', 'writeWinds')
-    blendWinds = config.getboolean('WindfieldInterface', 'blendWinds')
+    blendWinds = config.getboolean('WindBlend', 'blendWinds')
     dtout = config.getfloat('WindfieldInterface', 'dtout')
     beta = config.getfloat('WindfieldInterface', 'beta')
     beta1 = config.getfloat('WindfieldInterface', 'beta1')

@@ -128,11 +128,18 @@ PARSERS = {
     'WindfieldInterface_trackfile': str,
     'WindfieldInterface_trackpath': str,
     'WindfieldInterface_writewinds': parseBool,
-    'WindfieldInterface_blendwinds': parseBool,
     'WindfieldInterface_blendwindsmethod': str,
     'WindfieldInterface_radiusfactor': float,
     'WindfieldInterface_dtout': float,
-    'WindfieldInterface_windfieldtype': str}
+    'WindfieldInterface_windfieldtype': str,
+    'WindBlend_blendwinds': parseBool,
+    'WindBlend_udsdset': str,
+    'WindBlend_udsres': str,
+    'WindBlend_udshost': str,
+    'WindBlend_udsctls': str,
+    'WindBlend_udsvars': parseList,
+    'WindBlend_udsonfig': str}
+
 
 DEFAULTS = """
 [Actions]
@@ -183,10 +190,19 @@ Resolution=0.05
 PlotOutput=False
 Domain=bounded
 writeWinds=False
+
+[WindBlend]
 blendWinds=False
 blendWindsMethod=rGale
 radiusFactor=1.5
 dtout=0.1
+blendwinds=False
+udsdset=cfsr
+udsres=0.2
+udshost=http://uds1.rag.metocean.co.nz:9191/uds
+udsctls=None
+udsconfig=None
+udsvars=ugrd10m,vgrd10m,mslp
 
 [Hazard]
 Years=2,5,10,20,25,50,100,200,250,500,1000
