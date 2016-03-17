@@ -75,7 +75,7 @@ class getData(object):
     def getUDS(self,):
         self.qdict.update({'time': [self.t0.strftime('%Y%m%d.%H%M%S'),
                            (self.t1+timedelta(hours=self.dt)).strftime('%Y%m%d.%H%M%S')]})
-        log.info("Downloading %s data from the UDS for %s to %s" %
+        log.debug("Downloading %s data from the UDS for %s to %s" %
                  (self.qdict['dset'],self.qdict['time'][0],self.qdict['time'][1]))
         query = Query(self.qdict)
         log.debug("Query %s" % query)
@@ -89,7 +89,7 @@ class getData(object):
                 nc = None
                 url = self.udshost + '?' + query.str()
                 log.info('Requesting url ' + url)
-                log.info('Saving file to %s' % self.outnc)
+                log.debug('Saving file to %s' % self.outnc)
                 self.filename, headers = urllib.urlretrieve(url, self.outnc)
             elif self.udsctls:
                 uds = UDS(ctlfile=self.udsctls) 

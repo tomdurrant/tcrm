@@ -326,9 +326,9 @@ class WindfieldAroundTrack(object):
                                     dt=dtout,
                                     udshost=udshost)
                 if udsres == self.resolution:
-                    log.info("UDS resolution matches output resolution")
+                    log.debug("UDS resolution matches output resolution")
                 else:
-                    log.info("Interpolating from udsres %s to native res %s" % (udsres, self.resolution))
+                    log.debug("Interpolating from udsres %s to native res %s" % (udsres, self.resolution))
 
         for i in timesInRegion:
 
@@ -865,7 +865,7 @@ def loadTracks(trackfile):
 def create_nc(filename, lats, lons, trackfile, config, vars=['mslp','uwnd','vwnd'],
               descs=['Pressure','uwind','vwnd'],
               units=['hPa','ms-1','ms-1'],
-              time_ref=datetime(1979,01,01)):
+              time_ref=datetime(1979,1,1)):
 
     trackfileDate = flModDate(trackfile)
     profileType = config.get('WindfieldInterface', 'profileType')
@@ -889,7 +889,7 @@ def create_nc(filename, lats, lons, trackfile, config, vars=['mslp','uwnd','vwnd
             value = config.get(section, option)
             gatts[key] = value
 
-    log.info('Creating output file %s...'% filename)
+    log.debug('Creating output file %s...'% filename)
     with Dataset(filename, 'w', format='NETCDF4') as nc:
         # Global attributes
         nc.Description = 'MetOcean Solutions Model Results'
