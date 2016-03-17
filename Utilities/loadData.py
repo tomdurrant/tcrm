@@ -888,7 +888,22 @@ def loadTrackFile(configFile, trackFile, source, missingValue=0,
         rGale = np.zeros(indicator.size, 'f')
 
     if 'penv' in inputData.dtype.names:
+        LOG.debug("Using penv data from track file")
         penv = np.array(inputData['penv'], 'd')
+        bad = ((np.isnan(penv) |
+                np.isinf(penv) |
+                (penv >= 10e+7) |
+                (penv <= 0)))
+        if bad.any():
+            LOG.warn("%s bad penv values of %s, filling with climatology" % (bad.sum(),bad.size))
+            try:
+                ncfile = cnfGetIniValue(configFile, 'Input', 'MSLPFile')
+            except:
+                LOG.exception("No input MSLP file specified in configuration")
+                raise
+            time = getTime(year, month, day, hour, minute)
+            penvclim = ltmPressure(jdays, time, lon, lat, ncfile)
+            np.putmask(penv, bad, penvclim)
     else:
         LOG.debug("No ambient MSLP data in this input file")
         LOG.debug("Sampling data from MSLP data defined in "
