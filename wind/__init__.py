@@ -917,13 +917,14 @@ def create_nc(filename, lats, lons, trackfile, config, vars=['mslp','uwnd','vwnd
             setattr(ncvars[var], 'units', unit)
             setattr(ncvars[var], 'description', desc)
 
-def write_record(filename, dt, record={}):
+def write_record(filename, recdt, record={}):
     log.debug('Writing record to file %s...'% filename)
-    recdt = datetime(dt.year, dt.month, dt.day, dt.hour, dt.second)
+    # recdt = datetime(dt.year, dt.month, dt.day, dt.hour, dt.second)
     with Dataset(filename, 'a') as nc:
         times = nc.variables['time']
         dim=times.size
         rectime = date2num(recdt,units=times.units)
+        nc.variables['time'][dim] = rectime
         for var, data in record.items():
             nc.variables[var][dim,:,:]=data
 
