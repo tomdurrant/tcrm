@@ -421,6 +421,8 @@ class WindfieldAroundTrack(object):
                                                       'uwnd':uwndb.values,
                                                       'vwnd':vwndb.values,
                                                       'bw':bweights})
+        if blendWinds:
+            self.data.dset.close()
 
         return gust, bearing, UU, VV, pressure, lonGrid / 100., latGrid / 100.
 
