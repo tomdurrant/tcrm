@@ -93,6 +93,7 @@ class TrackMapFigure(MapFigure):
         for track in tracks:
             mlon, mlat = mapobj(track.Longitude, track.Latitude)
             self.colorline(mlon, mlat, track.WindSpeed, alpha=0.75)
+            # self.colorline(mlon, mlat, track.Central, alpha=0.75)
         axes.set_title(title)
         #self.labelAxes(axes)
         self.addGraticule(axes, mapobj)
