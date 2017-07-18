@@ -1,5 +1,5 @@
 from Utilities.plotting import plotMap
-import xray as xr
+import xarray as xr
 import matplotlib.pyplot as plt
 import NumpyTestCase
 import unittest

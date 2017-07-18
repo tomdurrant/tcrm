@@ -1,4 +1,4 @@
-import xray as xr
+import xarray as xr
 from Utilities.plotting import plotMap
 import matplotlib.pyplot as plt
 import numpy as np
@@ -96,7 +96,7 @@ class TestFilters(unittest.TestCase):
 
     def test_2dgradient(self):
         gradx, grady = np.gradient(self.dset.mslp[self.timestep])
-        mgrad = np.sqrt(gradx ** 2 + grady ** 2) 
+        mgrad = np.sqrt(gradx ** 2 + grady ** 2)
         ngrad = mgrad / mgrad.max() * self.tmp2d
         plotMap(ngrad,ax=self.axs[1,0]); plt.title("Gradient")
         plotMap(np.maximum(ngrad,self.gauss),ax=self.axs[1,1]); plt.title("Max(gradient,gaussian)")
@@ -118,14 +118,14 @@ class TestFilters(unittest.TestCase):
         from skimage.morphology import watershed
         from skimage.feature import peak_local_max
         from scipy import ndimage as ndi
-        # Separate the two objects in image 
+        # Separate the two objects in image
         # Generate the markers as local maxima of the distance to the
         # background
         # Find peaks of background field within 100km of Pc
         dscale = self.dset.mslp[self.timestep].copy()
         image = dscale.values.copy()
         local_maxi = peak_local_max(-image, indices=False,)
-        markers = ndi.label(local_maxi)[0] 
+        markers = ndi.label(local_maxi)[0]
         labels = watershed(image, markers, mask=image)
         plotMap(self.R * self.tmp2d,ax=self.axs[1,0]);plt.title('Distance')
         plotMap(markers * dscale,ax=self.axs[1,1]);plt.title('Separated Peaks')

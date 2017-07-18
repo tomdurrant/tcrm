@@ -9,7 +9,7 @@ import urllib
 from datetime import datetime, timedelta
 import logging as log
 log.level=20
-import xray as xr
+import xarray as xr
 import matplotlib.pyplot as plt
 import os
 
@@ -92,7 +92,7 @@ class getData(object):
                 log.debug('Saving file to %s' % self.outnc)
                 self.filename, headers = urllib.urlretrieve(url, self.outnc)
             elif self.udsctls:
-                uds = UDS(ctlfile=self.udsctls) 
+                uds = UDS(ctlfile=self.udsctls)
                 uds.logger = log
                 uds.getDSList(query)
                 uds.getData(query, self.outnc)
