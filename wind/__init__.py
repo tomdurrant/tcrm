@@ -7,7 +7,7 @@ calculations. It provides the radial profile models to define the
 primary vortex of the simulated TC, and bounday layer models that
 define the asymmetry induced by surface friction and forward motion of
 the TC over the earth's surface. The final output from the module is a
-netCDF file containing the maximum surface gust wind speed (a 10-minute 
+netCDF file containing the maximum surface gust wind speed (a 10-minute
 mean wind speed, at 10 metres above ground level), along with the components
 (eastward and westward) that generated the wind gust and the minimum
 mean sea level pressure over the lifetime of the event. If multiple
@@ -28,7 +28,7 @@ calling the :meth:`run` with the location of a *configFile*::
 
 """
 
-import xray as xr
+import xarray as xr
 from netCDF4 import Dataset, date2num
 import numpy as np
 import numpy.ma as ma
@@ -410,7 +410,7 @@ class WindfieldAroundTrack(object):
                         data = self.data.dset.sel(time = rectime, method='nearest')
                         for var in udsvars:
                             f = interp2d(self.data.dset.lon.values,
-                                         self.data.dset.lat.values, 
+                                         self.data.dset.lat.values,
                                          data[var].values,
                                          kind='cubic')
                             bground[var] = (['lat','lon'],f(lonout,latout))
