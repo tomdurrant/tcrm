@@ -605,7 +605,7 @@ class TrackGenerator(object):
                                       cdfInitPressure)
             else:
                 genesisPressure = initPressure
-                
+
             # Sample an initial maximum radius if none is provided
 
             if not initRmax:
@@ -624,7 +624,7 @@ class TrackGenerator(object):
                     while genesisRmax > 100.:
                         self.rmwEps = np.random.normal(0, scale=0.335)
                         genesisRmax = trackSize.rmax(dp, genesisLat, self.rmwEps)
-                
+
             else:
                 genesisRmax = initRmax
             # Do not generate tracks from this genesis point if we are
@@ -668,7 +668,7 @@ class TrackGenerator(object):
             data = np.core.records.fromarrays(data, dtype=track_dtype)
             track = Track(data)
             track.trackId = (j, simId)
-                        
+
             if not (empty(track) or diedEarly(track)) \
                and validPressures(track) and validSize(track) and validInitSize(track):
                 if self.innerGridLimit and not insideDomain(track):
@@ -681,7 +681,7 @@ class TrackGenerator(object):
                     j += 1
             else:
                 log.debug("Eliminated invalid track")
-        
+
         """
         # Filter the generated tracks based on certain criteria
         nbefore = len(results)
@@ -896,6 +896,7 @@ class TrackGenerator(object):
         bearing = np.empty(self.maxTimeSteps, 'f')
         pressure = np.empty(self.maxTimeSteps, 'f')
         poci = np.empty(self.maxTimeSteps, 'f')
+        rgale = np.empty(self.maxTimeSteps, 'f')
         rmax = np.empty(self.maxTimeSteps, 'f')
         land = np.empty(self.maxTimeSteps, 'i')
         dist = np.empty(self.maxTimeSteps, 'f')
@@ -915,6 +916,7 @@ class TrackGenerator(object):
         poci[0] = getPoci(initEnvPressure, initPressure,
                           initLat, jday[0], poci_eps)
         rmax[0] = initRmax
+        rgale[0] = 150 # Todo don't hard code this
         land[0] = 0
         dist[0] = self.dt * speed[0]
 
@@ -963,7 +965,7 @@ class TrackGenerator(object):
             penv = self.mslp.get_pressure(np.array([[jday[i]],
                                                     [lat[i]],
                                                     [lon[i]]]))
-            
+
             # Terminate and return the track if it steps out of the
             # domain
 
@@ -975,9 +977,10 @@ class TrackGenerator(object):
                 log.debug('TC exited domain at point ' +
                           '(%.2f %.2f) and time %i', lon[i], lat[i], i)
 
+                # TODO Need to actually calculate rGale (set to 150 below)
                 return (index[:i], dates[:i], age[:i], lon[:i], lat[:i],
                         speed[:i], bearing[:i], pressure[:i],
-                        poci[:i], rmax[:i])
+                        poci[:i], rmax[:i], rgale[:i])
 
             cellNum = Cstats.getCellNum(lon[i], lat[i],
                                         self.gridLimit, self.gridSpace)
@@ -1043,6 +1046,8 @@ class TrackGenerator(object):
                 dp = poci[i] - pressure[i]
                 rmax[i] = trackSize.rmax(dp, lat[i], self.rmwEps)
                 #rmax[i] = rmax[i - 1]
+            # todo: code this up as above
+            rgale[i] = 150
 
             # Update the distance and the age of the cyclone
 
@@ -1057,10 +1062,11 @@ class TrackGenerator(object):
 
                 return (index[:i], dates[:i], age[:i], lon[:i], lat[:i],
                         speed[:i], bearing[:i], pressure[:i], poci[:i],
-                        rmax[:i])
+                        rmax[:i], rgale[:i])
 
+        # TODO Need to actually calculate rGale (set to 150 below)
         return (index, dates, age, lon, lat, speed, bearing, pressure,
-                poci, rmax)
+                poci, rmax, rgale)
 
     def _stepPressureChange(self, c, i, onLand):
         """
