@@ -105,7 +105,7 @@ class Timeseries(object):
 
         self.meta = False
 
-        stnFile = config.get('Input', 'LocationFile')
+        stnFile = config.get('Timeseries', 'LocationFile')
         self.outputPath = pjoin(config.get('Output', 'Path'),
                                     'process', 'timeseries')
 
@@ -115,7 +115,7 @@ class Timeseries(object):
                                     'process', 'minima.csv')
 
 
-        log.debug("Loading stations from %s"%stnFile)
+        log.info("Loading timeseries stations from %s"%stnFile)
         log.debug("Timeseries data will be written into %s"%self.outputPath)
         self.stations = []
         if stnFile.endswith("shp"):
@@ -127,8 +127,10 @@ class Timeseries(object):
             vertices = shpGetVertices(stnFile, key_name=key_name)
 
             for stn in vertices.keys():
-                self.stations.append(Station(stn, vertices[stn][0][0],
-                                                  vertices[stn][0][1]))
+                lat = vertices[stn][0][1]
+                lon = vertices[stn][0][0]
+                lon = np.where(lon < 0., lon + 360., lon)
+                self.stations.append(Station(stn, lon, lat))
 
 
         else:

@@ -106,21 +106,69 @@ the ``$PATH`` for this to work.
 Compiling the extensions
 ------------------------
 
-Unix
-~~~~
 The model requires a number of C extensions to be compiled before
 execution. These can be built using Python's inbuilt :mod:`distutils`
-module. Copy the required files from the `installer` directory to the
-base directory and then execute the build process::
+module.
 
-    python intaller/setup.py build_ext -i
+
+Unix
+~~~~
+From the base directory, execute the build process::
+
+    python installer/setup.py build_ext -i
+
+Ubuntu
+~~~~~~
+The github branch issue_25 (created from the v2.0 branch) had an environment created by `installing miniconda
+<https://conda.io/docs/install/quick.html#linux-miniconda-install>`_ and executing the following commands.
+
+        ~/miniconda2/bin/conda create --name tcrm
+        ~/miniconda2/bin/source activate tcrm
+        ~/miniconda2/bin/conda install numpy
+        ~/miniconda2/bin/conda install scipy
+        ~/miniconda2/bin/conda install matplotlib
+        ~/miniconda2/bin/conda install basemap
+        ~/miniconda2/bin/conda install netcdf4
+        ~/miniconda2/bin/conda install shapely
+        ~/miniconda2/bin/conda install Tornado
+        ~/miniconda2/bin/conda install statsmodel
+        ~/miniconda2/bin/conda install seaborn
+        ~/miniconda2/bin/pip --proxy=http://localhost:3128 install simplejson
+
+
+The following libraries were needed to compile the C extensions, and run the unit tests:
+    sudo apt install libgl1-mesa-glx
+    sudo apt-get install python-numpy-dev
+
+The C extensions were compiled from the trcm directory with:
+        (tcrm) user@server:~/tcrm$ python intaller/setup.py build_ext -i
+
+An error occurred where the include file seems to have changed paths. It may be a one off,
+or it may reoccur in another version of Linux. The error was in KPDF.c and the change was to
+comment out one line and replace it with another.
+
+        #include "numpy/arrayobject.h"
+        /* #include "arrayobject.h" */
+
+A requiremements file was created in the root directory called ``linux_v20.yml`` and should (it hasn't been tested)
+replace the ``conda install`` commands above. The command to use this file is:
+
+        conda env create -f linux_v20.yml
+
+Activating the environment would be
+        source activate linux_v20
 
 
 Windows
 ~~~~~~~
 
 For Windows users, the code includes the ``compile.cmd`` script in the
-main TCRM diretory that will build these extensions in place.
+main TCRM diretory that will build these extensions in place. By default, TCRM uses the MinGW suite (http://www.mingw.org) for compiling the extensions. Other Windows-based packages can also be used (e.g. Cygwin). See the Python documentation on writing configuration files for the :mod:`distutils` package for more details.
+
+Notes
+~~~~~
+
+It is recommended to use a stand-alone Python installation for compiling and running TCRM. Installations linked to other software such as ArcGIS have resulted in compilation errors, as the required :mod:`numpy` libraries are pre-compiled and packaged with such installations. 
 
 .. _testing:
 
@@ -161,3 +209,4 @@ Windows system. This test failure will appear as::
     FAILED (failures=1)
 
 Such an error will not affect model execution.
+

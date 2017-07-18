@@ -17,7 +17,7 @@ wind speed, at each location in the domain, which could then be
 selected for more detailed modelling.
 
 :class:`HazardDatabase` is initially intended to be created once, then
-queried from subsequent scripts or interactive sessions. By 
+queried from subsequent scripts or interactive sessions. By
 inheriting from the :class:`Singleton` class, this will only ever return
 the first instance of :class:`HazardDatabase` created in a session.
 
@@ -31,20 +31,16 @@ TODO::
   be stored in the db (?).
 - Separate the query functions to separate files.
 
-
-
 """
 
 import os
 import logging
 import sqlite3
-
 from sqlite3 import PARSE_DECLTYPES, PARSE_COLNAMES
 
 from datetime import datetime
 import unicodedata
 import re
-
 from os.path import join as pjoin
 
 from shapely.geometry import Point
@@ -52,15 +48,17 @@ from netCDF4 import Dataset
 import numpy as np
 
 from Utilities.config import ConfigParser
-from Utilities.files import flModDate, flGetStat
+from Utilities.files import flGetStat
 from Utilities.maputils import find_index
-from Utilities.loadData import loadTrackFile
-from Utilities.track import loadTracksFromFiles
+from Utilities.track import loadTracksFromFiles, loadTracks
 from Utilities.singleton import Singleton
+from Utilities.parallel import attemptParallel, disableOnWorkers
 from Utilities.process import pAlreadyProcessed, pWriteProcessedFile, \
     pGetProcessedFiles
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
+
+# pylint: disable=R0914,R0902
 
 # Table definition statements
 # Stations - we assume a geographic coordinate system:
@@ -127,22 +125,18 @@ SELECTLOCATIONS = ("SELECT * FROM tblLocations WHERE "
 # Select locId, locLon & locLat from the subset of locations:
 SELECTLOCLONLAT = "SELECT locId, locLon, locLat FROM tblLocations "
 
-def windfieldAttributes(ncfile):
+def windfieldAttributes(ncobj):
     """
     Extract the required attributes from a netCDF file.
 
-    :param str ncfile: Path to a valid netCDF file created by TCRM.
+    :param str ncobj: :class:`netCDF4.Dataset` instance.
 
     :returns: A tuple containing the track filename, file modification date,
               TCRM version, minimum pressure and maximum wind, stored as
               global attributes in the netCDF file.
 
     """
-    try:
-        ncobj = Dataset(ncfile, 'r')
-    except Exception as err:
-        log.exception("Cannot open file: {0}: {1}".format(ncfile, err.args[0]))
-        raise
+
     trackfile = getattr(ncobj, 'track_file')
     trackfiledate = getattr(ncobj, 'track_file_date')
     trackfiledate = datetime.strptime(trackfiledate, '%Y-%m-%d %H:%M:%S')
@@ -157,16 +151,27 @@ def windfieldAttributes(ncfile):
 
     vmaxobj = ncobj.variables['vmax']
     maxwind = getattr(vmaxobj, 'actual_range')[1]
-    ncobj.close()
+
     return (trackfile, trackfiledate, tcrm_vers, minslp, maxwind)
 
-def HazardDatabase(configFile):
+def HazardDatabase(configFile): # pylint: disable=C0103
+    """
+    A wrapper function to instantiate :class:`_HazardDatabase`. We actually
+    call :meth:`getInstance` to get a singleton instance of the
+    :class:`_HazardDatabase`. If one exists already, then that instance is
+    returned.
+
+    :param str configFile: Path to configuration file
+
+    """
     return _HazardDatabase.getInstance(configFile)
 
 class _HazardDatabase(sqlite3.Connection, Singleton):
     """
     Create and update a database of locations, events, hazard, wind
-    speed and tracks.
+    speed and tracks. Because it subclasses the :class:`Singleton` object,
+    it will create a new instance if there is not already an active instance,
+    or it will return an existing instance.
 
     :param str configFile: Path to the simulation configuration file.
 
@@ -198,9 +203,10 @@ class _HazardDatabase(sqlite3.Connection, Singleton):
         import atexit
         atexit.register(self.close)
 
+    @disableOnWorkers
     def createDatabase(self):
         """
-        Create the database.
+        Create the database and the tables in the database.
 
         """
         log.info("Building the hazard database...")
@@ -213,6 +219,7 @@ class _HazardDatabase(sqlite3.Connection, Singleton):
         self.commit()
         return
 
+    @disableOnWorkers
     def createTable(self, tblName, tblDef):
         """
         Create a table.
@@ -232,6 +239,7 @@ class _HazardDatabase(sqlite3.Connection, Singleton):
                           format(tblName, err.args[0]))
             raise
 
+    @disableOnWorkers
     def setLocations(self):
         """
         Populate _tblLocations_ in the hazard database with all
@@ -295,7 +303,7 @@ class _HazardDatabase(sqlite3.Connection, Singleton):
         log.info("Inserting records into tblEvents")
 
         fileList = os.listdir(self.windfieldPath)
-        fileList = [f for f in fileList if 
+        fileList = [f for f in fileList if
                     os.path.isfile(pjoin(self.windfieldPath, f))]
 
         pattern = re.compile(r'\d+')
@@ -324,6 +332,44 @@ class _HazardDatabase(sqlite3.Connection, Singleton):
         else:
             self.commit()
 
+    def insertEvents(self, eventparams):
+        """
+        Insert records into _tblEvents_, using the collection of event
+        parameters.
+
+        :param eventparams: A collection of tuples, each of which represents
+                            an individual event record.
+        """
+        log.debug("Inserting records into tblEvents")
+        try:
+            self.execute(INSEVENTS, eventparams)
+        except sqlite3.Error as err:
+            log.exception("Cannot insert records into tblEvents: {0}".\
+                          format(err.args[0]))
+        else:
+            self.commit()
+
+    def insertWindSpeeds(self, wsparams):
+        """
+        Insert records into _tblWindSpeed_, using the collection of
+        location-specific wind speeds extracted from the event catalogue.
+
+        :param wsparams: A collection of tuples, each of which represents
+                         an individual location record.
+        """
+        nrecords = len(wsparams)
+        log.debug("Inserting {0} records into tblWindSpeed".format(nrecords))
+        try:
+            self.executemany(INSWINDSPEED, wsparams)
+        except sqlite3.Error as err:
+            log.exception("Cannot insert records into tblWindSpeed: {0}".\
+                          format(err.args[0]))
+        except sqlite3.ProgrammingError as err:
+            log.exception("Programming error: {0}".format(err.args[0]))
+        else:
+            self.commit()
+
+
     def processEvents(self):
         """
         Process the events (wind fields) for each location within the
@@ -335,42 +381,128 @@ class _HazardDatabase(sqlite3.Connection, Singleton):
                  _tblWindSpeed_.
 
         """
-        log.info("Inserting records into tblWindSpeed")
         fileList = os.listdir(self.windfieldPath)
-
         fileList = [f for f in fileList if
                     os.path.isfile(pjoin(self.windfieldPath, f))]
 
-        locations = self.getLocations()
-        for f in sorted(fileList):
-            fstat = flGetStat(pjoin(self.windfieldPath, f))
-            if (pAlreadyProcessed(fstat[0], fstat[1], 'md5sum', fstat[2]) and
-                    self.excludePastProcessed):
-                log.debug("Already processed %s", f)
-            else:
-                log.debug("Processing {0}".format(f))
-                if self.processEvent(f, locations):
-                    pWriteProcessedFile(pjoin(self.windfieldPath, f))
+        work_tag = 0
+        result_tag = 1
+        if (pp.rank() == 0) and (pp.size() > 1):
+            locations = self.getLocations()
+            w = 0
+            p = pp.size() - 1
+            for d in range(1, pp.size()):
+                if w < len(fileList):
+                    pp.send((fileList[w], locations, w),
+                            destination=d, tag=work_tag)
+                    log.debug("Processing {0} ({1} of {2})".\
+                              format(fileList[w], w, len(fileList)))
+                    w += 1
+                else:
+                    pp.send(None, destination=d, tag=work_tag)
+                    p = w
 
-    def processEvent(self, filename, locations):
+            terminated = 0
+
+            while terminated < p:
+                result, status = pp.receive(pp.any_source, tag=result_tag,
+                                            return_status=True)
+                log.debug("Processing results from node {0}".\
+                          format(status.source))
+                eventparams, wsparams = result
+                self.insertEvents(eventparams)
+                self.insertWindSpeeds(wsparams)
+                log.debug("Done inserting records from node {0}".\
+                          format(status.source))
+
+                d = status.source
+                if w < len(fileList):
+                    pp.send((fileList[w], locations, w),
+                            destination=d, tag=work_tag)
+                    log.debug("Processing file %d of %d" % (w, len(fileList)))
+                    w += 1
+                else:
+                    pp.send(None, destination=d, tag=work_tag)
+                    terminated += 1
+
+        elif (pp.size() > 1) and (pp.rank() != 0):
+            while True:
+                W = pp.receive(source=0, tag=work_tag)
+                if W is None:
+                    break
+
+                log.info("Processing {0} on node {1}".\
+                         format(W[0], pp.rank()))
+                results = self.processEvent(*W)
+                log.debug("Results received on node {0}".format(pp.rank()))
+                pp.send(results, destination=0, tag=result_tag)
+
+        elif pp.size() == 1 and pp.rank() == 0:
+            # Assume no Pypar:
+            locations = self.getLocations()
+            for eventNum, filename in enumerate(fileList):
+                log.debug("Processing {0} ({1} of {2})".format(filename, 
+                                                               eventNum, 
+                                                               len(fileList)))
+                result = self.processEvent(filename, locations, eventNum)
+                eventparams, wsparams = result
+                self.insertEvents(eventparams)
+                self.insertWindSpeeds(wsparams)
+
+
+    def loadWindfieldFile(self, ncobj):
         """
-        Process an individual event file
-        :param str filename: Full path to a file to process.
-        :param list locations: List of locations to sample data for.
+        Load an individual dataset.
+
+        :param str filename: filename to load.
+
+        :returns: tuple containing longitude, latitude, wind speed,
+                  eastward and northward components and pressure grids.
         """
-        log.debug("Processing {0}".format(pjoin(self.windfieldPath, filename)))
-        pattern = re.compile(r'\d+')
-        sim, num = pattern.findall(filename)
-        eventId = "%03d-%05d" % (int(sim), int(num))
-        ncobj = Dataset(pjoin(self.windfieldPath, filename))
         lon = ncobj.variables['lon'][:]
         lat = ncobj.variables['lat'][:]
         vmax = ncobj.variables['vmax'][:]
         ua = ncobj.variables['ua'][:]
         va = ncobj.variables['va'][:]
         pmin = ncobj.variables['slp'][:]
+
+        return (lon, lat, vmax, ua, va, pmin)
+
+    def processEvent(self, filename, locations, eventNum):
+        """
+        Process an individual event file
+        :param str filename: Name of a file to process.
+        :param list locations: List of locations to sample data for.
+        :param int eventNum: Ordered event number.
+        """
+        log.debug("Processing {0}".format(pjoin(self.windfieldPath, filename)))
+        pattern = re.compile(r'\d+')
+        sim, num = pattern.findall(filename)
+        eventId = "%03d-%05d" % (int(sim), int(num))
+        log.debug("Event ID: {0}".format(eventId))
+        try:
+            ncobj = Dataset(pjoin(self.windfieldPath, filename))
+        except:
+            log.warn("Cannot open {0}".\
+                     format(pjoin(self.windfieldPath, filename)))
+
+        # First perform the event update for tblEvents:
+        fname = pjoin(self.windfieldPath, filename)
+        log.debug("Filename: {0}".format(fname))
+        si = os.stat(fname)
+        dtWindfieldFile = datetime.fromtimestamp(int(si.st_mtime))
+        trackfile, dtTrackFile, tcrm_version, minslp, maxwind = \
+                windfieldAttributes(ncobj)
+
+        eventparams = ("%06d"%eventNum, eventId, os.path.basename(fname),
+                       trackfile, float(maxwind), float(minslp),
+                       dtTrackFile, dtWindfieldFile, tcrm_version,
+                       "", datetime.now())
+
+        # Perform update for tblWindSpeed:
+        lon, lat, vmax, ua, va, pmin = self.loadWindfieldFile(ncobj)
         ncobj.close()
-        params = list()
+        wsparams = list()
 
         for loc in locations:
             locId, locName, locLon, locLat = loc
@@ -382,22 +514,12 @@ class _HazardDatabase(sqlite3.Connection, Singleton):
             locPr = pmin[j, i]
             locParams = (locId, eventId, float(locVm), float(locUa),
                          float(locVa), float(locPr), " ", datetime.now())
-            params.append(locParams)
+            wsparams.append(locParams)
 
-        try:
-            self.executemany(INSWINDSPEED, params)
-        except sqlite3.Error as err:
-            log.exception("Cannot insert records into tblWindSpeed: {0}".\
-                          format(err.args[0]))
-            return 0
-        except sqlite3.ProgrammingError as err:
-            log.exception("Programming error: {0}".format(err.args[0]))
-            return 0
-        else:
-            self.commit()
+        log.debug("Finished extracting data from {0}".format(filename))
+        return (eventparams, wsparams,)
 
-        return 1
-
+    @disableOnWorkers
     def processHazard(self):
         """
         Update _tblHazard_ with the return period wind speed data.
@@ -468,33 +590,160 @@ class _HazardDatabase(sqlite3.Connection, Singleton):
         """
         log.info("Inserting records into tblTracks")
         locations = self.getLocations()
-        points = [Point(loc[2], loc[3]) for loc in locations]
 
+        log.debug("Processing tracks in {0}".format(self.trackPath))
         files = os.listdir(self.trackPath)
-        trackfiles = [pjoin(self.trackPath, f) for f in files \
-                      if f.startswith('tracks')]
-        tracks = loadTracksFromFiles(sorted(trackfiles))
-        params = []
+        trackfiles = [pjoin(self.trackPath, f) for f in files if f.startswith('tracks')]
+        #tracks = [t for t in loadTracksFromFiles(sorted(trackfiles))]
+        log.debug("There are {0} track files".format(len(trackfiles)))
+
+
+        work_tag = 0
+        result_tag = 1
+
+        if (pp.rank() == 0) and (pp.size() > 1):
+            w = 0
+            p = pp.size() - 1
+            for d in range(1, pp.size()):
+                if w < len(trackfiles):
+                    pp.send((trackfiles[w], locations),
+                            destination=d, tag=work_tag)
+                    log.debug("Processing {0}".format(trackfiles[w]))
+                    log.debug("Processing track {0:d} of {1:d}".\
+                              format(w, len(trackfiles)))
+                    w += 1
+                else:
+                    pp.send(None, destination=d, tag=work_tag)
+                    p = w
+
+            terminated = 0
+
+            while terminated < p:
+                result, status = pp.receive(pp.any_source, tag=result_tag,
+                                            return_status=True)
+                if result:
+                    log.debug("Inserting results into tblTracks")
+                    self.insertTracks(result)
+                d = status.source
+                if w < len(trackfiles):
+                    pp.send((trackfiles[w], locations),
+                            destination=d, tag=work_tag)
+                    log.debug("Processing track {0:d} of {1:d}".\
+                              format(w, len(trackfiles)))
+                    w += 1
+                else:
+                    pp.send(None, destination=d, tag=work_tag)
+                    terminated += 1
+
+        elif (pp.size() > 1) and (pp.rank() != 0):
+            while True:
+                W = pp.receive(source=0, tag=work_tag)
+                log.debug("Received track on node {0}".format(pp.rank()))
+                if W is None:
+                    break
+
+                results = self.processTrack(*W)
+                pp.send(results, destination=0, tag=result_tag)
+
+        elif pp.size() == 1 and pp.rank() == 0:
+            # No Pypar
+            for w, trackfile in enumerate(trackfiles):
+                log.debug("Processing trackfile {0:d} of {1:d}".\
+                          format(w, len(trackfiles)))
+                #if len(track.data) == 0:
+                #    continue
+                result = self.processTrack(trackfile, locations)
+                if result is not None:
+                    self.insertTracks(result)
+
+    def processTrack(self, trackfile, locations):
+        """
+        Process individual track to determine distance to locations, etc.
+
+        Any empty tracks are filtered at an earlier stage. If an empty
+        track is passed, then a None result is returned.
+
+        :param track: :class:`Track` instance.
+        :param locations: list of locations in the simulation domain.
+        """
+        tracks = [t for t in loadTracksFromFiles([trackfile])]
+        points = [Point(loc[2], loc[3]) for loc in locations]
+        records = []
         for track in tracks:
             if len(track.data) == 0:
-                continue
+                log.debug("Got an empty track: returning None")
+                continue #return None
             distances = track.minimumDistance(points)
             for (loc, dist) in zip(locations, distances):
-                locParams = (loc[0], "%03d-%05d"%(track.trackId),
-                             dist, None, None, "", datetime.now())
+                locRecs = (loc[0], "%03d-%05d"%(track.trackId),
+                           dist, None, None, "", datetime.now())
 
-                params.append(locParams)
+                records.append(locRecs)
+            log.debug("Track {0}-{1} has {2} records".format(track.trackId[0], 
+                                                             track.trackId[1],
+                                                             len(records)))
+        return records
 
+    def insertTracks(self, trackRecords):
+        """
+        Insert track parameters into _tblTracks_, using details for each
+        location in relation to the track
+
+        :param trackParams: collection of tuples that hold records (i.e.
+                            (location details) for each track.
+        """
         try:
-            self.executemany(INSTRACK, params)
+            self.executemany(INSTRACK, trackRecords)
         except sqlite3.Error as err:
             log.exception(("Cannot insert records into tblTracks: "
                            "{0}").format(err.args[0]))
             raise
         else:
             self.commit()
+            log.debug("Inserted {0} records into tblTracks".format(len(trackRecords)))
 
+def run(configFile):
+    """
+    Run database update
 
+    :param str configFile: path to a configuration file.
+
+    """
+
+    log.info('Running database update')
+
+    config = ConfigParser()
+    config.read(configFile)
+    outputPath = config.get('Output', 'Path')
+    location_db = pjoin(outputPath, 'locations.db')
+    if not os.path.exists(location_db):
+        location_file = config.get('Input', 'LocationFile')
+        buildLocationDatabase(location_db, location_file)
+
+    global pp
+    pp = attemptParallel()
+
+    db = HazardDatabase(configFile)
+
+    db.createDatabase()
+    db.setLocations()
+
+    pp.barrier()
+    db.processEvents()
+    pp.barrier()
+
+    db.processHazard()
+
+    pp.barrier()
+    db.processTracks()
+    pp.barrier()
+
+    db.close()
+    pp.barrier()
+    log.info("Created and populated database")
+    log.info("Finished running database creation")
+
+@disableOnWorkers
 def buildLocationDatabase(location_db, location_file, location_type='AWS'):
     """
     Build a database of locations, using a point shape file of the locations.
@@ -534,6 +783,7 @@ def buildLocationDatabase(location_db, location_file, location_type='AWS'):
     """
 
     from Utilities.shptools import shpReadShapeFile
+    log.info("Creating location database")
     locations = []
     vertices, records = shpReadShapeFile(location_file)
 
@@ -565,6 +815,8 @@ def buildLocationDatabase(location_db, location_file, location_type='AWS'):
         locCountry = r[4]
         locElev = r[7]
         locComment = r[1]
+        log.debug("Inserting record for: {0} ({1}): ({2}, {3})".\
+                      format(locName, locCode, locLon, locLat))
         locations.append((None, locCode, locName, location_type,
                           locLon, locLat, locElev, locCountry,
                           os.path.basename(location_file),

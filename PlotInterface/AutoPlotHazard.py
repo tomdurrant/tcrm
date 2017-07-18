@@ -93,8 +93,9 @@ class AutoPlotHazard(object):
             lon = lon - 360.
 
         [xgrid, ygrid] = np.meshgrid(lon, lat)
+        dmask = inputData.mask
         inputData = metutils.convert(inputData, 'mps', self.plotUnits.units)
-
+        inputData = ma.array(inputData, mask=dmask)
         map_kwargs = dict(llcrnrlon=xgrid.min(),
                           llcrnrlat=ygrid.min(),
                           urcrnrlon=xgrid.max(),
@@ -221,14 +222,14 @@ class AutoPlotHazard(object):
             raise
 
         # Load data
-        wspd = nctools.ncGetData(ncobj, 'wspd')
-        try:
-            wLower = nctools.ncGetData(ncobj, 'wspdlower')
-            wUpper = nctools.ncGetData(ncobj, 'wspdupper')
-            ciBounds = True
-        except KeyError:
-            ciBounds = False
-        ncobj.close()
+        #wspd = nctools.ncGetData(ncobj, 'wspd')
+        #try:
+        #    wLower = nctools.ncGetData(ncobj, 'wspdlower')
+        #    wUpper = nctools.ncGetData(ncobj, 'wspdupper')
+        ciBounds = True
+        #except KeyError:
+        #    ciBounds = False
+        #ncobj.close()
 
         minLon = min(lon)
         maxLon = max(lon)
@@ -259,14 +260,25 @@ class AutoPlotHazard(object):
             name.replace(' ', '')
             filename = pjoin(plotPath, 'ARI_curve_%s.%s'%(name, "png"))
             log.debug("Saving hazard curve for %s to %s"%(name, filename))
-            placeWspd = metutils.convert(wspd[:, j, i], 'mps',
+            wspd = ncobj.variables['wspd'][:, j, i]
+            
+
+            placeWspd = metutils.convert(wspd, 'mps',
                                          self.plotUnits.units)
+            if np.all(placeWspd.mask):
+                log.debug("All values for {0} are null".format(name))
+                continue
+
             if ciBounds:
-                placeWspdLower = metutils.convert(wLower[:, j, i], 'mps',
+                wspdLower = ncobj.variables['wspdlower'][:, j, i]
+                wspdUpper = ncobj.variables['wspdupper'][:, j, i]
+                placeWspdLower = metutils.convert(wspdLower, 'mps',
                                                   self.plotUnits.units)
-                placeWspdUpper = metutils.convert(wUpper[:, j, i], 'mps',
+                placeWspdUpper = metutils.convert(wspdUpper, 'mps',
                                                   self.plotUnits.units)
 
             saveHazardCurve(years, placeWspd, placeWspdUpper, placeWspdLower,
                             xlabel, ylabel, title, filename)
+
+        ncobj.close()
 
