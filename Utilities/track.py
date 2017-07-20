@@ -204,7 +204,7 @@ def ncReadTrackData(trackfile):
             log.debug("Loading data for {0}".format(t))
             track_data = data.variables['track'][:]
 
-            try: 
+            try:
                 dt = num2date(track_data['Datetime'],
                               data.variables['time'].units,
                               data.variables['time'].calendar)
@@ -415,7 +415,7 @@ def loadTracksFromFiles(trackfiles):
         tracks = loadTracks(f)
         for track in tracks:
             yield track
-    
+
 def loadTracksFromPath(path):
     """
     Helper function to obtain a generator that yields :class:`Track` objects
@@ -429,7 +429,7 @@ def loadTracksFromPath(path):
 
     :raises: IOError if the path does not exist.
     """
-    try: 
+    try:
         files = os.listdir(path)
         trackfiles = [pjoin(path, f) for f in files if f.startswith('tracks')]
         msg = "Loading {0} track files in {1}".format(len(trackfiles), path)

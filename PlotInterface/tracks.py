@@ -98,7 +98,10 @@ class TrackMapFigure(MapFigure):
 
         for track in tracks:
             mlon, mlat = mapobj(track.Longitude, track.Latitude)
-            self.colorline(mlon, mlat, track.WindSpeed, alpha=0.75)
+            try:
+                self.colorline(mlon, mlat, track.WindSpeed, alpha=0.75)
+            except Exception as e:
+                self.colorline(mlon, mlat, track.CentralPressure, alpha=0.75)
         axes.set_title(title)
         #self.labelAxes(axes)
         self.addGraticule(axes, mapobj)
@@ -181,6 +184,54 @@ def main(configFile):
     figure.plot()
     saveFigure(figure, outputFile)
 
+def plotSyntheticTracks(configFile):
+    from Utilities.track import loadTracksFromPath
+    from Utilities.config import ConfigParser
+    from os.path import join as pjoin, normpath, dirname
+    baseDir = normpath(pjoin(dirname(__file__), '..'))
+    inputPath = pjoin(baseDir, 'input')
+    config = ConfigParser()
+    config.read(configFile)
+
+    inputFile = config.get('WindfieldInterface', 'TrackPath')
+    nsims = config.get('TrackGenerator', 'NumSimulations')
+    nyrs = config.get('TrackGenerator', 'YearsPerSimulation')
+    source = "%s %s year simulations" % (nsims, nyrs)
+
+    gridLimit = config.geteval('Region', 'gridLimit')
+
+    xx = np.arange(gridLimit['xMin'], gridLimit['xMax'] + .1, 0.1)
+    yy = np.arange(gridLimit['yMin'], gridLimit['yMax'] + .1, 0.1)
+
+    xgrid, ygrid = np.meshgrid(xx, yy)
+
+    if len(dirname(inputFile)) == 0:
+        inputFile = pjoin(inputPath, inputFile)
+
+    try:
+        tracks = loadTracksFromPath(inputFile)
+    except (TypeError, IOError, ValueError):
+        log.critical("Cannot load historical track file: {0}".format(inputFile))
+        raise
+
+    title = source
+    outputPath = config.get('Output', 'Path')
+    outputPath = pjoin(outputPath, 'plots', 'stats')
+    outputFile = pjoin(outputPath, 'sync_tracks.png')
+
+    map_kwargs = dict(llcrnrlon=xgrid.min(),
+                      llcrnrlat=ygrid.min(),
+                      urcrnrlon=xgrid.max(),
+                      urcrnrlat=ygrid.max(),
+                      projection='merc',
+                      resolution='i')
+
+    figure = TrackMapFigure()
+    figure.add(tracks, xgrid, ygrid, title, map_kwargs)
+    figure.plot()
+    saveFigure(figure, outputFile)
+
 if __name__ == "__main__":
     CONFIG = sys.argv[1]
-    main(CONFIG)
+    #main(CONFIG)
+    plotSyntheticTracks(CONFIG)
