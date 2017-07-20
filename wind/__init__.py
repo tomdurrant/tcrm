@@ -927,7 +927,7 @@ def write_record(filename, recdt, record={}):
     with Dataset(filename, 'a') as nc:
         times = nc.variables['time']
         dim=times.size
-        rectime = date2num(recdt,units=times.units)
+        rectime = date2num(recdt,units=times.units, calendar=recdt.calendar)
         nc.variables['time'][dim] = rectime
         for var, data in record.items():
             nc.variables[var][dim,:,:]=data
