@@ -42,6 +42,7 @@ import logging
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
+from Utilities.distributions import gauss, tophat # for blending
 
 
 class WindSpeedModel(object):
@@ -821,7 +822,7 @@ class NewHollandWindProfile(WindProfileModel):
         requirement for a first-pass guess at `x`.
 
         Calculate velocity as a function of radial distance.
-        Represents the velocity of teh gradient level vortex.
+        Represents the velocity of the gradient level vortex.
 
         :param R: :class:`numpy.ndarray` of distance of grid from
                   the TC centre.
@@ -927,6 +928,16 @@ class WindFieldModel(object):
         """
         raise NotImplementedError
 
+    def blendWeights(self, R):
+        # looks like not used by vortex-background blending
+        # the method in blend.py seems to be the only one used
+        """
+        The weights for blending of wind field.
+        """
+        mu = 0
+        sig = 5 * self.rMax
+        delta = 3 * self.rMax
+        return gauss(R,mu,sig)
 
 class HubbertWindField(WindFieldModel):
 

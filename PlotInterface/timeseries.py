@@ -70,7 +70,7 @@ class TimeSeriesFigure(Figure):
     def plot(self):
 
         axes = self.add_subplot(111)
-        pc = mpl.rcParams['axes.prop_cycle']
+        pc = mpl.rcParams['axes.prop_cycle'] # there may be a bug here that Tom fixed before...
         color = iter(pc.by_key()['color'])
         ax1 = axes.twinx()
         ax2 = axes.twinx()

@@ -903,6 +903,7 @@ class TrackGenerator(object):
         bearing = np.empty(self.maxTimeSteps, 'f')
         pressure = np.empty(self.maxTimeSteps, 'f')
         poci = np.empty(self.maxTimeSteps, 'f')
+        rgale = np.empty(self.maxTimeSteps, 'f') # Added a hack to fix rgale specification for now
         rmax = np.empty(self.maxTimeSteps, 'f')
         land = np.empty(self.maxTimeSteps, 'i')
         dist = np.empty(self.maxTimeSteps, 'f')
@@ -922,6 +923,7 @@ class TrackGenerator(object):
         poci[0] = getPoci(initEnvPressure, initPressure,
                           initLat, jday[0], poci_eps)
         rmax[0] = initRmax
+        rgale[0] = 150 # # Added a hack to fix rgale specification for now (\TODO don't hard code this)
         land[0] = 0
         dist[0] = self.dt * speed[0]
 
@@ -975,9 +977,10 @@ class TrackGenerator(object):
                 log.debug('TC exited domain at point ' +
                           '(%.2f %.2f) and time %i', lon[i], lat[i], i)
 
+                # TODO Need to actually calculate rGale (set to 150 below)
                 return (index[:i], dates[:i], age[:i], lon[:i], lat[:i],
                         speed[:i], bearing[:i], pressure[:i],
-                        poci[:i], rmax[:i])
+                        poci[:i], rmax[:i], rgale[:i])
 
             cellNum = stats.getCellNum(lon[i], lat[i],
                                        self.gridLimit, self.gridSpace)
@@ -1042,6 +1045,8 @@ class TrackGenerator(object):
             else:
                 dp = poci[i] - pressure[i]
                 rmax[i] = trackSize.rmax(dp, lat[i], self.rmwEps)
+            # todo: code this up as above
+            rgale[i] = 150
 
             # Update the distance and the age of the cyclone
 
@@ -1056,10 +1061,11 @@ class TrackGenerator(object):
 
                 return (index[:i], dates[:i], age[:i], lon[:i], lat[:i],
                         speed[:i], bearing[:i], pressure[:i], poci[:i],
-                        rmax[:i])
+                        rmax[:i], rgale[:i])
 
+        # TODO Need to actually calculate rGale (set to 150 below)
         return (index, dates, age, lon, lat, speed, bearing, pressure,
-                poci, rmax)
+                poci, rmax, rgale)
 
     def _stepPressureChange(self, c, i, onLand):
         """

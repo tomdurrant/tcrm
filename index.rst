@@ -10,7 +10,6 @@ Contents
 .. toctree::
    :maxdepth: 1
 
-   License information <LICENSE>
    Introduction <docs/intro>
    Installation <docs/install>
    Setting up the model <docs/setup>

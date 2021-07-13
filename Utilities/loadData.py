@@ -898,8 +898,35 @@ def loadTrackFile(configFile, trackFile, source, missingValue=0,
         LOG.debug("No radius to max wind data - all values will be zero")
         rmax = np.zeros(indicator.size, 'f')
 
+    # Add rgales to allow correct calculation of holland 2010 fields
+    try:
+        rGale = np.array(inputData['rGale'])
+        novalue_index = np.where(rGale == missingValue)
+        rGale = metutils.convert(rGale, inputLengthUnits, "km")
+        rGale[novalue_index] = missingValue
+
+    except (ValueError, KeyError):
+        LOG.debug("No radius to galse wind data - all values will be zero")
+        rGale = np.zeros(indicator.size, 'f')
+
     if 'penv' in inputData.dtype.names:
+        LOG.debug("Using penv data from track file")
         penv = np.array(inputData['penv'], 'd')
+        # Added the filling of missing penv data from tracks with climatology
+        bad = ((np.isnan(penv) |
+                np.isinf(penv) |
+                (penv >= 10e+7) |
+                (penv <= 0)))
+        if bad.any():
+            LOG.warn("%s bad penv values of %s, filling with climatology" % (bad.sum(),bad.size))
+            try:
+                ncfile = cnfGetIniValue(configFile, 'Input', 'MSLPFile')
+            except:
+                LOG.exception("No input MSLP file specified in configuration")
+                raise
+            time = getTime(year, month, day, hour, minute)
+            penvclim = ltmPressure(jdays, time, lon, lat, ncfile)
+            np.putmask(penv, bad, penvclim)
     else:
         LOG.debug("No ambient MSLP data in this input file")
         LOG.debug("Sampling data from MSLP data defined in "
@@ -948,7 +975,7 @@ def loadTrackFile(configFile, trackFile, source, missingValue=0,
                           [indicator, TCID, year, month,
                            day, hour, minute, timeElapsed,
                            datetimes, lon, lat, speed, bearing,
-                           pressure, windspeed, rmax, poci]):
+                           pressure, windspeed, rmax, poci, rGale]): # Added rgales to allow correct calculation of holland 2010 fields
         data[key] = value
 
     tracks = []

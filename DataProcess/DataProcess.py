@@ -305,6 +305,14 @@ class DataProcess(object):
         except (ValueError, KeyError):
             self.logger.warning("No rmax data available")
 
+        try: # Added rgales to tracks and wind and pressure profiles to allow correct calculation of holland 2010 fields
+            rmax = np.array(inputData['rGale'])
+            novalue_index = np.where(rGale == sys.maxint)
+            rGale = metutils.convert(rGale, inputLengthUnits, "km")
+            rGale[novalue_index] = sys.maxint
+        except (ValueError, KeyError):
+            self.logger.warning("No rmax data available")
+
         if self.ncflag:
             self.data['index'] = indicator
 
