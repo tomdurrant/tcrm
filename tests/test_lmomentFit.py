@@ -22,10 +22,10 @@
  Description: Unit testing module for lmomentFit.py
 
  Version: $Rev: 737 $
- 
- ModifiedBy: 
- ModifiedDate: 
- Modification: 
+
+ ModifiedBy:
+ ModifiedDate:
+ Modification:
 
  $Id: test_lmomentFit.py 737 2012-11-21 00:59:42Z carthur $
 """
@@ -33,8 +33,8 @@
 import os
 import sys
 import unittest
-import cPickle
-import NumpyTestCase
+import pickle
+from . import NumpyTestCase
 import numpy
 
 # Add parent folder to python path
@@ -46,10 +46,10 @@ from Utilities.files import flStartLog
 class Testlmoments(NumpyTestCase.NumpyTestCase):
 
     def setUp(self):
-        pfile = open(os.path.join(unittest_dir, 'test_data', 'testlmom.pck'),'r')
-        self.values = cPickle.load(pfile)
-        self.moments = cPickle.load(pfile)
-        self.params = cPickle.load(pfile)
+        pfile = open(os.path.join(unittest_dir, 'test_data', 'testlmom.pkl'),'rb')
+        self.values = pickle.load(pfile)
+        self.moments = pickle.load(pfile)
+        self.params = pickle.load(pfile)
 
         pfile.close()
 

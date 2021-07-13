@@ -19,9 +19,8 @@ the TCRM User Guide for details on running this script.
 """
 
 import logging as log
-if 'NullHandler' not in dir(log):
-    from Utilities import py26compat
-    log.NullHandler = py26compat.NullHandler
+log.getLogger('matplotlib').setLevel(log.WARNING)
+from functools import reduce
 
 import os
 import time
@@ -37,7 +36,6 @@ from Utilities.files import flStartLog
 from Utilities.version import version
 from Utilities.progressbar import SimpleProgressBar as ProgressBar
 from Evaluate import interpolateTracks
-from PlotInterface.maps import saveWindfieldMap
 
 __version__ = version()
 
@@ -55,7 +53,7 @@ def timer(f):
           reduce(lambda ll, b : divmod(ll[0], b) + ll[1:],
                         [(tottime,), 60, 60])
 
-        log.info("Time for {0}: {1}".format(f.func_name, msg) )
+        log.info("Time for {0}: {1}".format(f.__name__, msg) )
         return res
 
     return wrap
@@ -96,7 +94,7 @@ def doTimeseriesPlotting(configFile):
     Run functions to plot time series output.
 
     :param str configFile: Path to configuration file.
-    
+
     """
 
     config = ConfigParser()
@@ -114,20 +112,30 @@ def doWindfieldPlotting(configFile):
     Plot the wind field on a map.
 
     :param str configFile: Path to the configuration file.
-    
+
     :Note: the file name is assumed to be 'gust.interp.nc'
 
     """
     from netCDF4 import Dataset
     import numpy as np
+    from PlotInterface.maps import saveWindfieldMap
+
     config = ConfigParser()
     config.read(configFile)
-
     outputPath = config.get('Output', 'Path')
     windfieldPath = pjoin(outputPath, 'windfield')
 
-    # Note the assumption about the file name!
-    outputWindFile = pjoin(windfieldPath, 'gust.interp.nc')
+    inputFile = config.get('DataProcess', 'InputFile')
+    if inputFile.endswith(".nc"):
+        # We have a netcdf track file. Work under the assumption it is
+        # drawn directly from TCRM.
+        trackFile = os.path.basename(inputFile)
+        trackId = trackFile.split('.')[1]
+        gustFile = 'gust.{0}.nc'.format(trackId)
+        outputWindFile = pjoin(windfieldPath, gustFile)
+    else:
+        # Note the assumption about the file name!
+        outputWindFile = pjoin(windfieldPath, 'gust.001-00001.nc')
     plotPath = pjoin(outputPath, 'plots', 'maxwind.png')
 
     f = Dataset(outputWindFile, 'r')
@@ -136,7 +144,7 @@ def doWindfieldPlotting(configFile):
     ydata = f.variables['lat'][:]
 
     vdata = f.variables['vmax'][:]
-    
+
     gridLimit = None
     if config.has_option('Region','gridLimit'):
         gridLimit = config.geteval('Region', 'gridLimit')
@@ -158,7 +166,7 @@ def doWindfieldPlotting(configFile):
     title = "Maximum wind speed"
     cbarlabel = "Wind speed ({0})".format(f.variables['vmax'].units)
     levels = np.arange(30, 101., 5.)
-    saveWindfieldMap(vdata, xgrid, ygrid, title, levels, 
+    saveWindfieldMap(vdata, xgrid, ygrid, title, levels,
                      cbarlabel, map_kwargs, plotPath)
 
 @timer
@@ -177,7 +185,7 @@ def main(configFile):
     source = config.get('DataProcess', 'Source')
     delta = 1/12.
     outputPath = pjoin(config.get('Output','Path'), 'tracks')
-    outputTrackFile = pjoin(outputPath, "tracks.interp.csv")
+    outputTrackFile = pjoin(outputPath, "tracks.interp.nc")
 
     # This will save interpolated track data in TCRM format:
     interpTrack = interpolateTracks.parseTracks(configFile, trackFile,
@@ -195,14 +203,20 @@ def main(configFile):
     import wind
     wind.run(configFile, status)
 
-    doWindfieldPlotting(configFile)
-    doTimeseriesPlotting(configFile)
+    import impact
+    impact.run_optional(config)
+
+    if config.getboolean('WindfieldInterface', 'PlotOutput'):
+        doWindfieldPlotting(configFile)
+
+    if config.getboolean('Timeseries', 'Extract'):
+        doTimeseriesPlotting(configFile)
 
 def startup():
     """
     Parse the command line arguments and call the :func:`main`
     function.
-    
+
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config_file',
@@ -258,7 +272,7 @@ def startup():
         try:
             main(configFile)
         except ImportError as e:
-            log.critical("Missing module: {0}".format(e.strerror))
+            log.critical("Missing module: {0}".format(e))
         except Exception:  # pylint: disable=W0703
             # Catch any exceptions that occur and log them (nicely):
             tblines = traceback.format_exc().splitlines()

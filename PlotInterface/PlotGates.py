@@ -31,11 +31,8 @@
 
  $Id: PlotGates.py 556 2007-10-23 23:51:09Z carthur $
 """
-import os
 
 import Utilities.my_tool as myutils
-import Utilities.maputils as maputils
-import numpy
 import math
 import pylab
 from matplotlib.toolkits.basemap import Basemap
@@ -53,8 +50,8 @@ lonmin = b*math.floor(min(lon)/b)
 lonmax = b*math.ceil(max(lon)/b)
 latmin = b*math.floor(min(lat)/b)
 latmax = b*math.ceil(max(lat)/b)
-meridian = (range(lonmin, lonmax+b, b))
-parallel = (range(latmin, latmax+b, b))
+meridian = (list(range(lonmin, lonmax+b, b)))
+parallel = (list(range(latmin, latmax+b, b)))
 prj = 'cyl'
 res = 'i'
 map = Basemap(projection=prj,

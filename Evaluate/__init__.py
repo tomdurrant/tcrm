@@ -9,30 +9,30 @@
 
 """
 
-from pressureDistribution import PressureDistribution
-from trackDensity import TrackDensity
-from longitudeCrossing import LongitudeCrossing
-from landfallRates import LandfallRates
-from genesisDensity import GenesisDensity
+from .pressureDistribution import PressureDistribution
+from .trackDensity import TrackDensity
+from .longitudeCrossing import LongitudeCrossing
+from .landfallRates import LandfallRates
+from .genesisDensity import GenesisDensity
 
 
 def run(configFile):
     """
     Run the evaluation methods for the pressure distributions, track
-    density, landfall rates and longitude crossing rates. 
+    density, landfall rates and longitude crossing rates.
 
     :param str configFile: path to the configuration file.
 
     """
-    
-    PD = PressureDistribution(configFile)
-    TD = TrackDensity(configFile)
-    LC = LongitudeCrossing(configFile)
-    LF = LandfallRates(configFile)
-    GD = GenesisDensity(configFile)
-    
-    PD.run()
-    TD.run()
-    LC.run()
-    LF.run()
-    GD.run()
+
+    pd = PressureDistribution(configFile)
+    td = TrackDensity(configFile)
+    lc = LongitudeCrossing(configFile)
+    lf = LandfallRates(configFile)
+    gd = GenesisDensity(configFile)
+
+    pd.run()
+    td.run()
+    lc.run()
+    lf.run()
+    gd.run()

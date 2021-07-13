@@ -3,9 +3,9 @@
 =============================================
 
 """
-
-from urllib2 import urlopen, URLError
-from cStringIO import StringIO
+from urllib.request import urlopen
+from urllib.error import URLError
+from io import BytesIO
 from Utilities.config import ConfigParser
 from os.path import isfile, splitext, join as pjoin
 
@@ -23,7 +23,7 @@ class DataSet(object):
     :param filename: name of the file to be saved (can be different from
                      the name of the dataset).
     :type filename: str or None
-    
+
     """
     def __init__(self, name, url, path, filename=None):
         self.name = name
@@ -48,18 +48,18 @@ class DataSet(object):
         :type callback: function
 
         :raises IOError: Unable to download the dataset.
-        
+
         """
-        
+
         if self.isDownloaded():
             return
 
         try:
             urlfile = urlopen(self.url, timeout=5)
             meta = urlfile.info()
-            data = StringIO()
+            data = BytesIO()
 
-            size = int(meta.getheaders('Content-Length')[0])
+            size = int(meta['Content-Length'])
             done = 0
             while True:
                 buf = urlfile.read(8192)
@@ -91,7 +91,7 @@ class DataSet(object):
         Determine if a file has already been downloaded
 
         :returns: `True` if the file exists, `False` otherwise.
-        
+
         """
         return isfile(pjoin(self.path, self.filename))
 
@@ -103,11 +103,11 @@ def loadDatasets(configFile):
     list.
 
     """
-    
+
     config = ConfigParser()
     config.read(configFile)
     datasets = config.get('Input', 'Datasets').split(',')
-    
+
     global DATASETS
     for dataset in datasets:
         url = config.get(dataset, 'URL')
@@ -127,10 +127,10 @@ def checkAndDownload(callback=None):
 
     :param callback: Callback function (for reporting status to STDOUT).
     :type callback: function
-    
+
 
     """
-    
+
     for dataset in DATASETS:
         dataset.download(callback)
 
@@ -139,5 +139,5 @@ if __name__ == '__main__':
     def status(fn, done, size):
         status = r"%s  %10d  [%3.2f%%]" % (fn, done, done * 100. / size)
         status = status + chr(8)*(len(status)+1)
-        print status,
+        print(status, end=' ')
     checkAndDownload(status)

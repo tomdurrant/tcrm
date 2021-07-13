@@ -175,7 +175,7 @@ def interpolate(x, y, x_new, axis=-1, out=None):
 
 try:
     py_interpolate = interpolate
-    from _akima import interpolate
+    from ._akima import interpolate
 except ImportError:
     import warnings
     warnings.warn("failed to import C extension module _akima")
@@ -186,6 +186,5 @@ __docformat__ = "restructuredtext en"
 
 if __name__ == "__main__":
     import doctest
-    import random
     doctest.testmod()
 

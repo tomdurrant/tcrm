@@ -20,8 +20,8 @@
 #** Title: PlotOriginGUI.py
 #**
 #** Author: Geoff Xu
-#** Email: 
-#** 
+#** Email:
+#**
 #** CreationDate: 2006-01-19
 #**
 #** Description: Define the class for PlotOriginGUI. This is a Python
@@ -113,21 +113,21 @@ class PlotOriginGUI:
         """
         pylab.figure(fig.getNum())
         self.p.plotOrigin()
-        fig.next()
+        next(fig)
         pylab.connect('button_press_event', self.on_click)
         pylab.figure(fig.getNum())
         self.p.plotOriginCounts()
-        fig.next()
+        next(fig)
         pylab.connect('button_press_event', self.on_click)
         pylab.figure(fig.getNum())
         self.p.plotOriginCells()
-        fig.next()
+        next(fig)
         pylab.connect('button_press_event', self.on_click)
         pylab.figure(fig.getNum())
         self.p.plotOriginCellsHist()
-        fig.next()
+        next(fig)
         self.cellFigNo = fig.getNum()
-        fig.next()
+        next(fig)
         self.p.plot3DOriginCounts()
 
     def on_click(self, event):
@@ -157,7 +157,7 @@ class PlotOriginGUI:
 if __name__ == "__main__":
     import utils.figure_number as FigureNumber
     import utils.my_tool as mtools
-    
+
     cfgMain = mtools.loadConfig(open('main.ini'))
     cfgFiles = mtools.loadConfig(open(cfgMain['Files.configFile']))
 
@@ -174,9 +174,9 @@ if __name__ == "__main__":
 
     lonDim = 5
     latDim = 5
- 
+
     plotOrgGUI = PlotOriginGUI(aus_coast_line, init_lon_lat, origin_counts,
-                               longitude_bin, latitude_bin, lonDim, latDim, 
+                               longitude_bin, latitude_bin, lonDim, latDim,
                                init_bearing, init_speed, init_pressure)
     plotOrgGUI.generatePlots(fig)
     #pylab.show()

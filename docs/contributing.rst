@@ -1,4 +1,5 @@
-.. _contributing:
+.. _contributing: 
+
 =================
 Contributing code
 =================

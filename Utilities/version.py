@@ -12,12 +12,7 @@
 
 import os
 import subprocess
-from files import flModulePath, flModDate
-
-# Monkey patch check_output into subprocess for python 2.6.X
-if 'check_output' not in dir(subprocess):
-    import py26compat
-    subprocess.check_output = py26compat.check_output
+from .files import flModulePath, flModDate
 
 
 UPDATE_MSG = """
@@ -25,7 +20,7 @@ UPDATE_MSG = """
 Your TCRM version is not up-to-date. The last 3 things that
 have been fixed are:
 
-%s
+{0}
 
 To update your version of TCRM, try running:
 
@@ -41,7 +36,7 @@ def git(command):
     :param str command: A valid git command.
     :return: Output from the given command.
     :rtype: str
-    
+
     """
     with open(os.devnull) as devnull:
         return subprocess.check_output('git ' + command,
@@ -54,7 +49,7 @@ def status():
     :returns: A message containing a listing of recent
               changes to the model code.
     :rtype: str
-    
+
     """
 
     msg = ''
@@ -65,7 +60,7 @@ def status():
         recent = git('log --pretty=format:" - %s (%ad)" --date=relative ' +
                      'origin/master HEAD~3..HEAD')
         if behind != 0:
-            msg = UPDATE_MSG % recent
+            msg = UPDATE_MSG.format(recent)
     except subprocess.CalledProcessError:
         pass
 
@@ -81,10 +76,10 @@ def version():
     :rtype: str
     :raises: :mod:`subprocess.CalledProcessError` if the git
              command fails.
-             
+
     .. note:: This requires ``git`` to be installed to execute.
     """
-    
+
     vers = ''
 
     try:
@@ -96,5 +91,5 @@ def version():
         fname = os.path.join(path, name+ext)
         fdate = flModDate(fname)
         vers = '{0} modified {1}'.format(fname, fdate)
-    
+
     return vers

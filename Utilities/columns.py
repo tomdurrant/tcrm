@@ -11,6 +11,7 @@
 
 import numpy as np
 from Utilities.config import ConfigParser
+import logging as log
 
 def colReadCSV(configFile, dataFile, source):
     """
@@ -26,7 +27,7 @@ def colReadCSV(configFile, dataFile, source):
                        corresponding section in the ``configFile``.
 
     :returns: A :class:`numpy.ndarray` that contains the input data.
-    
+
     """
     config = ConfigParser()
     config.read(configFile)
@@ -34,12 +35,19 @@ def colReadCSV(configFile, dataFile, source):
     numHeadingLines = config.getint(source, 'NumberOfHeadingLines')
     cols = config.get(source, 'Columns').split(delimiter)
 
-    usecols = [i for i,c in enumerate(cols) if c != 'skip']
-
-    data = np.genfromtxt(dataFile, dtype=None, delimiter=delimiter,
-            usecols=usecols, comments=None, skip_header=numHeadingLines, 
-            autostrip=True)
-
-    data.dtype.names = [c for c in cols if c != 'skip']
+    usecols = [i for i, c in enumerate(cols) if c != 'skip']
+    names = [c for c in cols if c != 'skip']
+    try:
+        data = np.genfromtxt(dataFile, dtype=None, delimiter=delimiter,
+                             usecols=usecols, names=names, skip_header=numHeadingLines,
+                             autostrip=True, encoding=None)
+    except IOError:
+        log.exception("File not found: {0}".format(dataFile))
+        raise IOError("File not found: {0}".format(dataFile))
+    except TypeError:
+        log.exception(("{0} is not a string, filehandle "
+                       "or generator.").format(dataFile))
+        raise TypeError(("{0} is not a string, filehandle "
+                         "or generator.").format(dataFile))
 
     return data

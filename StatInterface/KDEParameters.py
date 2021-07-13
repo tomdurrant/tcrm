@@ -12,20 +12,30 @@ estimation) of given cyclone parameters (speed, pressure, bearing, etc).
 Each of these PDF's is converted to a cumulative density function for
 use in other sections.
 
+.. note:: In changing from the previous KPDF module to statsmodels, the 
+          bandwidth calculation gives substantially different values for
+          univariate data. For test data, the updated functions give a 
+          smaller bandwidth value compared to KPDF.
+
 """
 
-import os, sys, pdb, logging
+import os
+import sys
+import logging
 
-#from scipy import array, arange, transpose
 import numpy as np
 import Utilities.stats as stats
-import Utilities.KPDF as KPDF
+
+from statsmodels.nonparametric.kde import kernel_switch
+import statsmodels.nonparametric.bandwidths as smbw
+import statsmodels.api as sm
 
 from Utilities.files import flLoadFile, flSaveFile
 from Utilities.config import cnfGetIniValue
 
+LOG = logging.getLogger()
 
-class KDEParameters:
+class KDEParameters(object):
     """
     Generates the probability density functions (using kernel density
     estimation) of given cyclone parameters (speed, pressure, bearing,
@@ -39,24 +49,28 @@ class KDEParameters:
 
     """
 
+
     def __init__(self, kdeType):
         """
         Initialize the logger and ensure the requested KDE type exists.
-
+        
+        This uses the `statsmodels.nonparametric.kernel_density` library
+        
         """
-        self.logger = logging.getLogger()
-        self.logger.info("Initialising KDEParameters")
-
-        if hasattr(KPDF, "UPDF%s" %kdeType):
-            self.logger.debug("Using %s to generate distribution"%kdeType)
+        LOG.info("Initialising KDEParameters")
+        kernels = kernel_switch.keys()
+        if kdeType in kernels:
+            LOG.debug(f"Using {kdeType} to generate distribution")
             self.kdeType = kdeType
         else:
-            self.logger.error("Invalid KDE type: %s" %kdeType)
-            raise NotImplementedError, "Invalid KDE type: %s" %kdeType
+            msg = (f"Invalid kernel type: {kdeType} \n"
+                   f"Valid kernels are {repr(kernels)}")
+            LOG.error(msg)
+            raise NotImplementedError(msg)
 
     def generateKDE(self, parameters, kdeStep, kdeParameters=None,
                     cdfParameters=None, angular=False, periodic=False,
-                    missingValue=sys.maxint):
+                    missingValue=sys.maxsize):
         """
         Generate a PDF and CDF for a given parameter set using the
         method of kernel density estimators. Optionally return the PDF
@@ -66,7 +80,7 @@ class KDEParameters:
                            then it is the path to a file containing
                            the values. If an array is passed, then it
                            should hold the parameter values.
-        
+
         :param kdeStep: Increment of the ordinate values at which
                         the distributions will be calculated.
         :type  kdeStep: float, default=`0.1`
@@ -85,23 +99,25 @@ class KDEParameters:
                          data (e.g. day of year). If given, it should
                          be the period of the data (e.g. for annual data,
                          ``periodic=365``).
-        :type  periodic: boolean or float, default=``False``
+        :type  periodic: boolean or int, default=``False``
         :param missingValue: Missing values have this value (default
                          :attr:`sys.maxint`).
 
         returns: If ``kdeParameters`` is given, returns ``None``
                   (data are saved to file), otherwise
                   :class:`numpy.ndarray` of the parameter grid, the PDF and CDF.
-                 
+
         """
 
-        self.logger.debug("Running generateKDE")
+        LOG.debug("Running generateKDE")
         if type(parameters) is str:
-            self.parameters = stats.statRemoveNum(flLoadFile(parameters, '%', ','), missingValue)
+            self.parameters = stats.statRemoveNum(flLoadFile(parameters,
+                                                             '%', ','),
+                                                  missingValue)
         else:
             if parameters.size <= 1:
-                self.logger.error("Insufficient members in parameter list")
-                raise IndexError, "Insufficient members in parameter list"
+                LOG.error("Insufficient members in parameter list")
+                raise IndexError("Insufficient members in parameter list")
 
             self.parameters = stats.statRemoveNum(parameters, missingValue)
 
@@ -115,38 +131,42 @@ class KDEParameters:
             xmin = self.parameters.min()
             xmax = self.parameters.max()
 
-        self.logger.debug("xmin=%7.3f, xmax=%7.3f, kdeStep=%7.3f" %
-                           (xmin, xmax, kdeStep))
+        LOG.debug("xmin=%7.3f, xmax=%7.3f, kdeStep=%7.3f" %
+                  (xmin, xmax, kdeStep))
         if periodic:
             x = np.arange(1, periodic + 1, kdeStep)
-            self.grid = np.concatenate( [x - periodic, x, x + periodic] )
+            self.grid = np.concatenate([x - periodic, x, x + periodic])
             self.parameters = np.concatenate([self.parameters - periodic,
                                               self.parameters,
                                               self.parameters + periodic])
         else:
             self.grid = np.arange(xmin, xmax, kdeStep)
 
-        if self.grid.size<2:
-            self.logger.critical("Grid for CDF generation is a single value")
-            self.logger.critical("xmin=%7.3f, xmax=%7.3f, kdeStep=%7.3f" %
-                                  (xmin, xmax,kdeStep))
+        if self.grid.size < 2:
+            LOG.critical("Grid for CDF generation is a single value")
+            LOG.critical("xmin=%7.3f, xmax=%7.3f, kdeStep=%7.3f", 
+                         xmin, xmax, kdeStep)
             raise ValueError
 
-        bw = KPDF.UPDFOptimumBandwidth(self.parameters)
+        #bw = KPDF.UPDFOptimumBandwidth(self.parameters)
+        bw = stats.bandwidth(self.parameters)
         self.pdf = self._generatePDF(self.grid, bw, self.parameters)
 
         if periodic:
-            self.pdf = 3.0*self.pdf[(periodic/kdeStep):2*(periodic/kdeStep)]
-            self.grid = self.grid[(periodic/kdeStep):2*(periodic/kdeStep)]
+            idx = int(periodic/kdeStep)
+            self.pdf = 3.0*self.pdf[idx:2*idx]
+            self.grid = self.grid[idx:2*idx]
 
         self.cy = stats.cdf(self.grid, self.pdf)
         if kdeParameters is None:
             return np.transpose(np.array([self.grid, self.pdf, self.cy]))
         else:
             # Assume both kdeParameters and cdfParameters are defined as files:
-            self.logger.debug("Saving KDE and CDF data to files")
-            flSaveFile(kdeParameters, np.transpose(np.array([self.grid, self.pdf])))
-            flSaveFile(cdfParameters, np.transpose(np.array([self.grid, self.cy])))
+            LOG.debug("Saving KDE and CDF data to files")
+            flSaveFile(kdeParameters,
+                       np.transpose(np.array([self.grid, self.pdf])))
+            flSaveFile(cdfParameters,
+                       np.transpose(np.array([self.grid, self.cy])))
 
     def generateGenesisDateCDF(self, genDays, lonLat, bw=None, genesisKDE=None):
         """
@@ -160,7 +180,7 @@ class KDEParameters:
         :param str genDays: Name of file containing genesis days
                             (as day of year).
         :param lonLat: Array of genesis longitudes and latitudes.
-        :param float bw: Optional. Bandwidth of the KDE to use. 
+        :param float bw: Optional. Bandwidth of the KDE to use.
         :param str genesisKDE: Optional. File name to save resulting CDF to.
         :type  lonLat: :class:`numpy.ndarray`
 
@@ -168,29 +188,36 @@ class KDEParameters:
                   of the genesis days.
         """
 
-        data = flLoadFile( genDays )
-        days = np.arange( 1, 366 )
-        ndays = np.concatenate( [days - 365, days, days + 365] )
-        ndata = np.concatenate( [data - 365, data, data + 365] )
+        data = flLoadFile(genDays)
+        days = np.arange(1, 366)
+        ndays = np.concatenate([days - 365, days, days + 365])
+        ndata = np.concatenate([data - 365, data, data + 365])
 
         if bw is None:
-            bw = KPDF.UPDFOptimumBandwidth( ndata )
+            bw = stats.bandwidth(self.parameters)
 
-        try:
-            kdeMethod = getattr(KPDF, "UPDF%s" %self.kdeType)
-        except AttributeError:
-            self.logger.exception("Invalid input on option: KDE method UPDF%s does not exist"%self.kdeType)
-            raise
-        pdf = kdeMethod( ndata, ndays, bw )
+        kde = sm.nonparametric.KDEUnivariate(self.parameters)
+        kde.fit(kernel=self.kdeType, bw=bw, fft=False, 
+                gridsize=len(grid), clip=(min(grid), max(grid)), cut=0)
+        #try:
+        #    kdeMethod = getattr(KPDF, "UPDF%s" % self.kdeType)
+        #except AttributeError:
+        #    LOG.exception(("Invalid input on option: "
+        #                   "KDE method UPDF%s does not exist"),
+        #                  self.kdeType)
+        #    raise
+            
+        veceval = np.vectorize(kde.evaluate)
+        pdf = np.nan_to_num(veceval(grid))
+        
         # Actual PDF to return
         apdf = 3.0*pdf[365:730]
         cy = stats.cdf(days, apdf)
         if genesisKDE is None:
-            return np.transpose(np.array(np.concatenate( [days, apdf, cy] ) ))
+            return np.transpose(np.array(np.concatenate([days, apdf, cy])))
         else:
             # Assume both kdeParameters and cdfParameters are defined as files:
-            self.logger.debug("Saving KDE and CDF data to files")
-            #flSaveFile(genesisKDE, transpose(numpy.concatenate([days, pdf])))
+            LOG.debug("Saving KDE and CDF data to files")
             flSaveFile(genesisKDE, np.transpose(np.array([days, cy])))
 
 
@@ -199,18 +226,29 @@ class KDEParameters:
         Sub-function that generates the PDFs of kernel
         density estimation from raw dataset
         """
-        self.logger.debug("Generating PDF")
+        LOG.debug("Generating PDF")
         if bw <= 0:
-            self.logger.critical("bw = %d. Bandwidth cannot be negative or zero", bw)
-            raise ValueError, 'bw = %d. Bandwidth cannot be negative or zero' %bw
+            LOG.critical("bw = %d. Bandwidth cannot be negative or zero", bw)
+            raise ValueError('bw = %d. Bandwidth cannot be negative or zero'%bw)
 
-        try:
-            kdeMethod = getattr(KPDF, "UPDF%s" %self.kdeType)
-        except AttributeError:
-            self.logger.exception("Invalid input on option: KDE method UPDF%s does not exist" %self.kdeType)
-            raise
+        kde = sm.nonparametric.KDEUnivariate(dataset)
 
-        return kdeMethod(dataset, grid, bw)
+        kde.fit(kernel=self.kdeType, fft=False, 
+                gridsize=len(grid), clip=(min(grid), max(grid)), cut=0)
+        veceval = np.vectorize(kde.evaluate)
+        pdf = veceval(grid)
+        return np.nan_to_num(pdf)
+        
+        #try:
+        #    
+        #    #kdeMethod = getattr(KPDF, "UPDF%s" %self.kdeType)
+        #except AttributeError:
+        #    LOG.exception(("Invalid input on option: "
+        #                   "KDE method UPDF%s does not exist"),
+        #                  self.kdeType)
+        #    raise
+
+        #return kdeMethod(dataset, grid, bw)
 
 if __name__ == "__main__":
     try:
@@ -220,17 +258,21 @@ if __name__ == "__main__":
         configFile = __file__.rstrip('.py') + '.ini'
         # If no filename is specified and default filename doesn't exist => raise error
         if not os.path.exists(configFile):
-            error_msg = "No configuration file specified, please type: python main.py {config filename}.ini"
-            raise IOError, error_msg
+            error_msg = ("No configuration file specified, please type: "
+                         "python main.py {config filename}.ini")
+            raise IOError(error_msg)
     # If config file doesn't exist => raise error
     if not os.path.exists(configFile):
         error_msg = "Configuration file '" + configFile +"' not found"
-        raise IOError, error_msg
+        raise IOError(error_msg)
 
-    logging.basicConfig(level=logging.getattr(cnfGetIniValue(configFile, 'Logging', 'LogLevel', 'DEBUG')),
-                        format='%(asctime)s %(name)-12s: %(levelname)-8s %(message)s',
-                        filename=cnfGetIniValue(configFile, 'Logging', 'LogFile', __file__.rstrip('.py') + '.log'),
-                        filemode='w')
+    logging.basicConfig(
+        level=logging.getattr(cnfGetIniValue(configFile, 'Logging',
+                                             'LogLevel', 'DEBUG')),
+        format='%(asctime)s %(name)-12s: %(levelname)-8s %(message)s',
+        filename=cnfGetIniValue(configFile, 'Logging', 'LogFile',
+                                __file__.rstrip('.py') + '.log'),
+        filemode='w')
 
     path = cnfGetIniValue(configFile, 'Output', 'Path')
 
@@ -243,11 +285,11 @@ if __name__ == "__main__":
 #    bearing_no_init = path+'bearing_no_init'
 #    kde_no_init_bearing = path+'kde_no_init_bearing'
 #    cdf_no_init_bearing = path+'cdf_no_init_bearing'
-    pressure_rate = os.path.join(path,'pressure_rate')
+    pressure_rate = os.path.join(path, 'pressure_rate')
 #    bearing_rate = path+'bearing_rate'
 #    speed_rate = path+'speed_rate'
-    kde_pressure_rate = os.path.join(path,'kde_pressure_rate')
-    cdf_pressure_rate = os.path.join(path,'cdf_pressure_rate')
+    kde_pressure_rate = os.path.join(path, 'kde_pressure_rate')
+    cdf_pressure_rate = os.path.join(path, 'cdf_pressure_rate')
 #    kde_bearing_rate = path+'kde_bearing_rate'
 #    cdf_bearing_rate = path+'cdf_bearing_rate'
 #    kde_speed_rate = path+'kde_speed_rate'
@@ -255,12 +297,12 @@ if __name__ == "__main__":
 
     kdeStep = 0.1
 
-    k = KDEParameters(cnfGetIniValue(configFile,'Parameters','kdeType','Biweight'), kdeStep)
+    k = KDEParameters(cnfGetIniValue(configFile, 'Parameters',
+                                     'kdeType', 'Biweight'), kdeStep)
 
     k.generateKDE(pressure_rate, kdeStep, kde_pressure_rate, cdf_pressure_rate)
     #k.generateKDE(bearing_rate, kde_bearing_rate, cdf_bearing_rate)
     #k.generateKDE(speed_rate, kde_speed_rate, cdf_speed_rate)
-    #pdb.set_trace()
     #k.plotKdeInit()
     #k.plotKdeAll()
     #k.plotKdeNoInit()

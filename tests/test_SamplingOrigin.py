@@ -26,12 +26,12 @@
  $Id$
 """
 import os, sys
-import cPickle
+import pickle
 import unittest
 from scipy import random
-import NumpyTestCase
+from . import NumpyTestCase
 try:
-    import pathLocate
+    from . import pathLocate
 except:
     from unittests import pathLocate
 
@@ -43,29 +43,29 @@ from Utilities.files import flStartLog
 
 
 class TestSamplingOrigin(NumpyTestCase.NumpyTestCase):
-    
+
     def setUp(self):
         self.numberOfSamples = 1000
-        pkl_file = open(os.path.join(unittest_dir, 'test_data', 'kdeOrigin_xyz.pck'), 'r')
-        xp = cPickle.load(pkl_file)
-        yp = cPickle.load(pkl_file)
-        zp = cPickle.load(pkl_file)
-        self.sampOrg = SamplingOrigin.SamplingOrigin(zp, xp, yp)
+        pkl_file = open(os.path.join(unittest_dir, 'test_data', 'kdeOrigin_xyz.pkl'), 'rb')
+        xp = pickle.load(pkl_file)
+        yp = pickle.load(pkl_file)
+        zp = pickle.load(pkl_file)
+        self.sampOrg = SamplingOrigin.SamplingOrigin(zp.T, xp, yp)
         random.seed(10)
 
     def test_GenerateSamples(self):
         """Testing GenerateSamples"""
-        samplesp = cPickle.load(open(os.path.join(unittest_dir, 'test_data', 'sample_origin.pck')))
-        lonLatp = cPickle.load(open(os.path.join(unittest_dir, 'test_data', 'sample_origin_lonLat.pck')))
+        samplesp = pickle.load(open(os.path.join(unittest_dir, 'test_data', 'sample_origin.pkl'), 'rb'))
+        lonLatp = pickle.load(open(os.path.join(unittest_dir, 'test_data', 'sample_origin_lonLat.pkl'), 'rb'))
         lonLat = self.sampOrg.generateSamples(self.numberOfSamples)
         self.numpyAssertAlmostEqual(lonLatp[:,0], lonLat[:,0])
         self.numpyAssertAlmostEqual(lonLatp[:,1], lonLat[:,1])
 
     def test_GenerateOneSample(self):
         """Testing GenerateOneSample"""
-        xp = 151.89999999999529
-        yp = -9.4
-        
+        xp = 151.6999999999
+        yp = -8.5
+
         x, y = self.sampOrg.generateOneSample()
         self.assertAlmostEqual(xp, x, 4)
         self.assertAlmostEqual(yp, y, 4)

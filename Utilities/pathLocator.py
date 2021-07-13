@@ -21,7 +21,7 @@ def is_frozen():
     py2exe.
 
     :return: `True` if the modules are frozen, `False` otherwise.
-    """ 
+    """
     # Modules built-in to the interpreter, e.g., by py2exe
     return hasattr(sys, "frozen")
 
@@ -33,8 +33,8 @@ def getRootDirectory():
     :return: Path name one level above this.
     :rtype: str
     """
-    
+
     encoding = sys.getfilesystemencoding()
     if is_frozen():
-        return os.path.dirname(unicode(sys.executable, encoding))
-    return os.path.abspath(os.path.join(os.path.dirname(unicode(__file__, encoding)), '..'))
+        return os.path.dirname(str(sys.executable, encoding))
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

@@ -1,30 +1,30 @@
-language: python
-python:
-  - "2.7"
-  - "2.6"
-# install system dependencies
+language: shell
+
+env:
+  - PYTHON_VERSION=3.6
+  - PYTHON_VERSION=3.7
+  - PYTHON_VERSION=3.8
+
+os: 
+  - linux
+  - windows
+
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install build-essential
-  - sudo apt-get install libhdf5-serial-dev
-  - sudo apt-get install libnetcdf-dev
-  - sudo apt-get install python-dev
-  - sudo apt-get install libgeos-c1 libgeos-dev
-  - sudo apt-get install libatlas-base-dev gfortran
-  - sudo apt-get install libblas3gf libc6 libgcc1 libgfortran3 liblapack3gf libumfpack5.4.0 libstdc++6
-# install Python dependencies
+  - source ./preinstall.sh
+
 install:
-  - sudo pip install conda
-  - sudo conda init
-  - deps='pip numpy scipy matplotlib basemap shapely nose coverage'
-  - conda create -p $HOME/py --yes $deps "python=$TRAVIS_PYTHON_VERSION"
-  - export PATH=$HOME/py/bin:$PATH
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.6 ]]; then pip install ordereddict; fi
-  - pip install pycurl
-  - pip -v install -r requirements.txt
-  - pip install coveralls
-script: 
+  - source ./postinstall.sh
+
+branches:
+  except:
+    - config
+    - notebooks
+
+script:
   - python installer/setup.py build_ext -i
-  - nosetests -w tests/ -v --with-coverage
-after_success: 
-  coveralls
+  - nosetests -v --with-coverage --cover-package=.
+
+after_success: coveralls
+notifications:
+  slack:
+    secure: Ckmwy59ytS1GPRZ5Tmvzad6+W9AzvfjNJAa4orgdKS/WktoK4b9W2rbTHxi8V3hBLIDUCso8vIQi3rVXpWY3cFMvb/uRbXO4GiIW1iua3CKjxd+dEw4E6/8DEknS1qdGJRDhN9/3ucZNvSGHY3EQQDfxb/R+OGd2jT6+jed8pss=

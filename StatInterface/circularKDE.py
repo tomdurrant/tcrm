@@ -15,9 +15,9 @@ on [0,2*pi).
 """
 
 import numpy as np
-import KPDF
 from scipy.special import i0
-from math import pi
+import statsmodels.nonparametric.bandwidths as smbw
+
 import stats
 
 def circularKDE(parameters, kdeStep=np.pi/16.):
@@ -26,16 +26,16 @@ def circularKDE(parameters, kdeStep=np.pi/16.):
     e.g. bearings. Returns the grid on which the PDF is defined, the
     PDF itself and the corresponding CDF.
 
-    By default, the grid is specified on [0,2\*pi)
+    By default, the grid is specified on [0, 2*pi)
 
     :param parameters: :class:`numpy.ndarray` of parameter values.
     :param float kdeStep: Increment of the ordinate at which the
                           distribution will be estimated.
 
     :returns: :class:`numpy.ndarray` of the grid, the PDF and the CDF.
-    
+
     """
-    bw = KPDF.UPDFOptimumBandwidth(parameters)
+    bw = stats.bandwidth(parameters)
     grid = np.arange(0, 2 * np.pi +kdeStep, kdeStep)
     pdf = np.empty(len(grid), 'float')
     chi = 1./(2 * np.pi * i0(bw))

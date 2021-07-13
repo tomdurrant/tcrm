@@ -4,12 +4,11 @@ from numpy.testing import assert_almost_equal
 
 import os
 import sys
-import numpy
 from datetime import datetime
-import cPickle
-import NumpyTestCase
+import pickle
+from . import NumpyTestCase
 try:
-    import pathLocate
+    from . import pathLocate
 except:
     from unittests import pathLocate
 
@@ -26,9 +25,9 @@ class TestInitialPositions(unittest.TestCase):
 
     def setUp(self):
 
-        self.inputData = cPickle.load(open(os.path.join(unittest_dir,
+        self.inputData = pickle.load(open(os.path.join(unittest_dir,
                                                         'test_data',
-                                                        'loadDataInput.pck')))
+                                                        'loadDataInput.pkl'), 'rb'))
         #self.indexData = dict(index=self.inputData['index'])
         self.serialData = dict(tcserialno=self.inputData['tcserialno'])
         self.seasonData = dict(season=self.inputData['season'],
@@ -36,16 +35,16 @@ class TestInitialPositions(unittest.TestCase):
         self.missingFields = dict(lon=self.inputData['lon'],
                                   lat=self.inputData['lat'])
 
-        self.numData = cPickle.load(open(os.path.join(unittest_dir,
+        self.numData = pickle.load(open(os.path.join(unittest_dir,
                                                       'test_data',
-                                                      'loadDataNumber.pck')))
+                                                      'loadDataNumber.pkl'), 'rb'))
 
-        self.testIndex = cPickle.load(open(os.path.join(unittest_dir,
+        self.testIndex = pickle.load(open(os.path.join(unittest_dir,
                                                         'test_data',
-                                                        'loadDataIndex.pck')))
-        self.numIndex = cPickle.load(open(os.path.join(unittest_dir,
+                                                        'loadDataIndex.pkl'), 'rb'))
+        self.numIndex = pickle.load(open(os.path.join(unittest_dir,
                                                        'test_data',
-                                                       'loadNumIndex.pck')))
+                                                       'loadNumIndex.pkl'), 'rb'))
 
     def test_getInitPos_fromSerialNo(self):
         """Test to ensure the function returns correct values based on serial number"""
@@ -64,8 +63,8 @@ class TestInitialPositions(unittest.TestCase):
 
     def test_getInitPos_failure(self):
         """Ensure getInitialPositions fails if insufficient data provided"""
-        self.assertRaises(ValueError, loadData.getInitialPositions,
-                                      self.missingFields)
+        self.assertRaises(KeyError, loadData.getInitialPositions,
+                          self.missingFields)
 
 
 
@@ -77,17 +76,17 @@ class TestDateParsing(unittest.TestCase):
     def setUp(self):
         """ """
         input_file = open(os.path.join(unittest_dir, 'test_data',
-                                       'parseDates.pck'))
+                                       'parseDates.pkl'), 'rb')
         self.dateformat = '%Y-%m-%d %H:%M:%S'
-        self.inputData = cPickle.load(input_file)
-        self.indicator = cPickle.load(input_file)
-        self.year = cPickle.load(input_file)
-        self.month = cPickle.load(input_file)
-        self.day = cPickle.load(input_file)
-        self.hour = cPickle.load(input_file)
-        self.minute = cPickle.load(input_file)
+        self.inputData = pickle.load(input_file)
+        self.indicator = pickle.load(input_file)
+        self.year = pickle.load(input_file)
+        self.month = pickle.load(input_file)
+        self.day = pickle.load(input_file)
+        self.hour = pickle.load(input_file)
+        self.minute = pickle.load(input_file)
         # For testing 'HHMM' formatted times:
-        self.hourmin = cPickle.load(input_file)
+        self.hourmin = pickle.load(input_file)
 
         input_file.close()
         self.input_dates = dict(date=self.inputData['date'])
@@ -153,15 +152,15 @@ class TestDateConversion(unittest.TestCase):
     def setUp(self):
 
         inputFile = open(os.path.join(unittest_dir, 'test_data',
-                                      'date2ymhd.pck'))
-        self.goodInputDates = cPickle.load(inputFile)
-        self.badInputDates = cPickle.load(inputFile)
+                                      'date2ymhd.pkl'), 'rb')
+        self.goodInputDates = pickle.load(inputFile)
+        self.badInputDates = pickle.load(inputFile)
         self.dateformat = '%Y-%m-%d %H:%M:%S'
-        self.outputYear = cPickle.load(inputFile)
-        self.outputMonth = cPickle.load(inputFile)
-        self.outputDay = cPickle.load(inputFile)
-        self.outputHour = cPickle.load(inputFile)
-        self.outputMinute = cPickle.load(inputFile)
+        self.outputYear = pickle.load(inputFile)
+        self.outputMonth = pickle.load(inputFile)
+        self.outputDay = pickle.load(inputFile)
+        self.outputHour = pickle.load(inputFile)
+        self.outputMinute = pickle.load(inputFile)
         inputFile.close()
 
 
@@ -211,16 +210,16 @@ class TestAgeParsing(unittest.TestCase):
 
     def setUp(self):
         inputFile = open(os.path.join(unittest_dir, 'test_data',
-                                                   'parseAge.pck'))
+                                                   'parseAge.pkl'), 'rb')
 
-        self.inputData = cPickle.load(inputFile)
-        self.indicator = cPickle.load(inputFile)
+        self.inputData = pickle.load(inputFile)
+        self.indicator = pickle.load(inputFile)
 
-        self.outputYear = cPickle.load(inputFile)
-        self.outputMonth = cPickle.load(inputFile)
-        self.outputDay = cPickle.load(inputFile)
-        self.outputHour = cPickle.load(inputFile)
-        self.outputMinute = cPickle.load(inputFile)
+        self.outputYear = pickle.load(inputFile)
+        self.outputMonth = pickle.load(inputFile)
+        self.outputDay = pickle.load(inputFile)
+        self.outputHour = pickle.load(inputFile)
+        self.outputMinute = pickle.load(inputFile)
         inputFile.close()
 
 #    def test_parseAge(self):
@@ -238,13 +237,13 @@ class TestTimeDeltas(unittest.TestCase):
 
     def setUp(self):
         inputFile = open(os.path.join(unittest_dir, 'test_data',
-                                      'getTimeDelta.pck'))
-        self.inputYear = cPickle.load(inputFile)
-        self.inputMonth = cPickle.load(inputFile)
-        self.inputDay = cPickle.load(inputFile)
-        self.inputHour = cPickle.load(inputFile)
-        self.inputMinute = cPickle.load(inputFile)
-        self.outputDT = cPickle.load(inputFile)
+                                      'getTimeDelta.pkl'), 'rb')
+        self.inputYear = pickle.load(inputFile)
+        self.inputMonth = pickle.load(inputFile)
+        self.inputDay = pickle.load(inputFile)
+        self.inputHour = pickle.load(inputFile)
+        self.inputMinute = pickle.load(inputFile)
+        self.outputDT = pickle.load(inputFile)
         inputFile.close()
 
     def test_getTimeDelta(self):
@@ -279,13 +278,13 @@ class TestTime(unittest.TestCase):
 
     def setUp(self):
         inputFile = open(os.path.join(unittest_dir, 'test_data',
-                                      'getTime.pck'))
-        self.inputYear = cPickle.load(inputFile)
-        self.inputMonth = cPickle.load(inputFile)
-        self.inputDay = cPickle.load(inputFile)
-        self.inputHour = cPickle.load(inputFile)
-        self.inputMinute = cPickle.load(inputFile)
-        self.outputTime = cPickle.load(inputFile)
+                                      'getTime.pkl'), 'rb')
+        self.inputYear = pickle.load(inputFile)
+        self.inputMonth = pickle.load(inputFile)
+        self.inputDay = pickle.load(inputFile)
+        self.inputHour = pickle.load(inputFile)
+        self.inputMinute = pickle.load(inputFile)
+        self.outputTime = pickle.load(inputFile)
         inputFile.close()
 
     def test_getTime(self):
@@ -320,13 +319,13 @@ class TestJulianDays(unittest.TestCase):
 
     def setUp(self):
         inputFile = open(os.path.join(unittest_dir, 'test_data',
-                                      'julianDays.pck'))
-        self.inputYear = cPickle.load(inputFile)
-        self.inputMonth = cPickle.load(inputFile)
-        self.inputDay = cPickle.load(inputFile)
-        self.inputHour = cPickle.load(inputFile)
-        self.inputMinute = cPickle.load(inputFile)
-        self.outputJdays = cPickle.load(inputFile)
+                                      'julianDays.pkl'), 'rb')
+        self.inputYear = pickle.load(inputFile)
+        self.inputMonth = pickle.load(inputFile)
+        self.inputDay = pickle.load(inputFile)
+        self.inputHour = pickle.load(inputFile)
+        self.inputMinute = pickle.load(inputFile)
+        self.outputJdays = pickle.load(inputFile)
         inputFile.close()
 
     def test_julianDays(self):
@@ -357,24 +356,95 @@ class TestJulianDays(unittest.TestCase):
         self.assertRaises(ValueError, loadData.julianDays,
                           *badYearArgs)
 
-class TestLoadingTrackFiles(unittest.TestCase):
+class TestGetPoci(unittest.TestCase):
 
     def setUp(self):
-        self.config_file = os.path.join(unittest_dir, 'test_data',
-                                      'test.ini')
-        self.track_file = os.path.join(unittest_dir, 'test_data',
-                                      'test_trackset.csv')
-        self.source = 'TESTSOURCE'
+        np.random.seed(10)
+        self.penv = np.arange(1000, 1011, 1)
+        self.pcentre = np.arange(900, 1001, 10, dtype=float)
+        self.lat = np.arange(-24, -2, 2)
+        self.jdays = np.arange(1, 365, 36)
 
-        inputFile = open(os.path.join(unittest_dir, 'test_data',
-                                      'loadTrackFile.pck'))
-        self.trackData = cPickle.load(inputFile)
+        self.pociOutput = np.array([1016.11315678, 1014.75370624,
+                                    1014.00665338, 1013.6080981,
+                                    1013.23285869, 1012.61540945,
+                                    1011.64863179, 1010.42365243,
+                                    1009.1959527, 1008.29035302,
+                                    1007.98020964])
+        self.pociOutputCoeffs = np.array([])
 
+    def test_getPociDefaults(self):
+        """Test getPoci returns correct value based on defaults"""
+        eps = np.random.normal(0, scale=2.5717404300409674)
+        Poci = loadData.getPoci(1000, 900, -24, 1, eps)
+        assert_almost_equal(Poci, 1016.1131567762006)
+
+    def test_getPociWrongLengths(self):
+        """getPoci raises exception when inputs are different lengths"""
+        eps = np.random.normal(0, scale=2.5717404300409674)
+        self.assertRaises(Exception, loadData.getPoci, self.penv[:-1],
+                          self.pcentre, self.lat, self.jdays, eps)
+
+    def test_getPociArrayInput(self):
+        """Test getPoci with array input"""
+        eps = np.random.normal(0, scale=2.5717404300409674)
+        Poci = loadData.getPoci(self.penv, self.pcentre, self.lat,
+                                self.jdays, eps)
+        assert_almost_equal(Poci, self.pociOutput)
+
+    def test_getPociArrayMissingValues(self):
+        """getPoci filters values where input data is missing"""
+        eps = np.random.normal(0, scale=2.5717404300409674)
+        pcentre = self.pcentre
+        pcentre[-1] = sys.maxsize
+        Poci = loadData.getPoci(self.penv, pcentre, self.lat,
+                                self.jdays, eps)
+        PociOutput = np.array([1016.11315678, 1014.75370624,
+                               1014.00665338, 1013.6080981,
+                               1013.23285869, 1012.61540945,
+                               1011.64863179, 1010.42365243,
+                               1009.1959527, 1008.29035302,
+                               np.nan])
+        assert_almost_equal(Poci, PociOutput)
+
+    def test_getPociArrayInvalidInput(self):
+        """getPoci filters values where penv < pcentre"""
+        eps = np.random.normal(0, scale=2.5717404300409674)
+        penv = self.penv
+        penv[-1] = 999
+        Poci = loadData.getPoci(self.penv, self.pcentre, self.lat,
+                                self.jdays, eps)
+        PociOutput = np.array([1016.11315678, 1014.75370624,
+                               1014.00665338, 1013.6080981,
+                               1013.23285869, 1012.61540945,
+                               1011.64863179, 1010.42365243,
+                               1009.1959527, 1008.29035302,
+                               np.nan])
+        assert_almost_equal(Poci, PociOutput)
+    
+    def test_getPociWithCoeffs(self):
+        """getPoci with user-defined set of coefficients"""
+        eps = np.random.normal(0, scale=2.5717404300409674)
+        coeffs = [2288, -0.65, -1.33, 7.0e-04, 5e-03, -1.5]
+        Poci = loadData.getPoci(1000, 900, -24, 1, eps, coeffs)
+        self.assertAlmostEqual(Poci, 1012.8047170899531)
+
+    def test_getPociIncompleteCoeffs(self):
+        """Test getPoci falls back to default coeffs if input incomplete"""
+        eps = np.random.normal(0, scale=2.5717404300409674)
+        coeffs = [-0.6496398,-1.33467, 
+                  7.085303e-04, 4.87049101e-03,
+                  -1.43573905]
+        Poci = loadData.getPoci(self.penv, self.pcentre, self.lat,
+                                self.jdays, eps, coeffs)
+        assert_almost_equal(Poci, self.pociOutput)
+    
+        
 #class TestFilterPressure(unittest.TestCase):
 #
 #    def setUp(self):
 #        inputFile = open(os.path.join(unittest_dir, 'test_data',
-#                                      'filterPressure.pck'))
+#                                      'filterPressure.pkl'), 'rb')
 #        self.inputdata = cPickle.load(inputFile)
 #        self.outputdata = cPickle.load(inputFile)
 #        inputFile.close()
@@ -385,4 +455,4 @@ class TestLoadingTrackFiles(unittest.TestCase):
 #        assert_almost_equal(result, self.outputdata, decimal=5)
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(verbosity=2)
