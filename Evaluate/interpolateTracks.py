@@ -3,7 +3,6 @@ import logging
 import numpy as np
 
 from datetime import datetime, timedelta
-from matplotlib.dates import num2date
 from scipy.interpolate import interp1d, splev, splrep
 
 from Utilities.maputils import latLon2Azi
@@ -93,7 +92,10 @@ def interpolate(track, delta, interpolation_type=None):
     newtime = np.arange(timestep[0], timestep[-1] + .01, delta)
     newtime[-1] = timestep[-1]
     _newtime = (newtime / 24.) + time_[0]
-    newdates = num2date(_newtime)
+    refsecs = (datetime(1970,1,1)-datetime(1,1,1)).total_seconds()
+    _newtimesecs = _newtime*24*60*60 - refsecs
+    newdates = [datetime.utcfromtimestamp(timesec) for timesec in _newtimesecs]
+    # newdates = num2date(_newtime) # results depend on mpl version
     newdates = np.array([n.replace(tzinfo=None) for n in newdates])
 
     if not hasattr(track, 'Speed'):
